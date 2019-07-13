@@ -107,13 +107,16 @@ struct ag71xx_buf {
 };
 
 struct ag71xx_ring {
-	struct ag71xx_buf	*buf;
-	u8			*descs_cpu;
-	dma_addr_t		descs_dma;
-	u16			desc_split;
-	u16			order;
+	/* "Hot" fields in the data path. */
 	unsigned int		curr;
 	unsigned int		dirty;
+
+	/* "Cold" fields - not used in the data path. */
+	struct ag71xx_buf	*buf;
+	u16			order;
+	u16			desc_split;
+	dma_addr_t		descs_dma;
+	u8			*descs_cpu;
 };
 
 struct ag71xx_int_stats {
@@ -151,21 +154,20 @@ struct ag71xx {
 	 * Critical data related to the per-packet data path are clustered
 	 * early in this structure to help improve the D-cache footprint.
 	 */
-	struct ag71xx_ring	rx_ring ____cacheline_aligned;
-	struct ag71xx_ring	tx_ring ____cacheline_aligned;
-
-	int			mac_idx;
-
-	u16			desc_pktlen_mask;
+	struct ag71xx_ring	rx_ring;
 	u16			rx_buf_size;
-	u8			rx_buf_offset;
+	u16			rx_buf_offset;
+	u32			msg_enable;
+
+	struct ag71xx_ring	tx_ring;
+	int			mac_idx;
+	u16			desc_pktlen_mask;
 	u8			tx_hang_workaround:1;
 
+	struct napi_struct	napi;
 	struct net_device	*dev;
 	struct platform_device  *pdev;
 	spinlock_t		lock;
-	struct napi_struct	napi;
-	u32			msg_enable;
 
 	/*
 	 * From this point onwards we're not looking at per-packet fields.
@@ -184,11 +186,11 @@ struct ag71xx {
 	unsigned int		speed;
 	int			duplex;
 
-	struct delayed_work	restart_work;
-	struct timer_list	oom_timer;
-
 	struct reset_control *mac_reset;
 	struct reset_control *mdio_reset;
+
+	struct delayed_work	restart_work;
+	struct timer_list	oom_timer;
 
 	u32			fifodata[3];
 	u32			plldata[3];
