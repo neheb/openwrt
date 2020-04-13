@@ -1,0 +1,30 @@
+From d9ed75ab56a86f08ea2fd4440d1667e611956097 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Sun, 12 Jan 2020 21:24:55 -0800
+Subject: [PATCH 8/8] base-files/system.sh: remove $ in $(())
+
+Not needed.
+
+https://github.com/koalaman/shellcheck/wiki/Sc2004
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ package/base-files/files/lib/functions/system.sh | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/package/base-files/files/lib/functions/system.sh b/package/base-files/files/lib/functions/system.sh
+index c4dc3cc3a9..eb91a66b3b 100644
+--- a/package/base-files/files/lib/functions/system.sh
++++ b/package/base-files/files/lib/functions/system.sh
+@@ -140,7 +141,7 @@ macaddr_add() {
+ 	local oui=${mac%:*:*:*}
+ 	local nic=${mac#*:*:*:}
+ 
+-	nic=$(printf "%06x" $((0x${nic//:/} + $val & 0xffffff)) | sed 's/^\(.\{2\}\)\(.\{2\}\)\(.\{2\}\)/\1:\2:\3/')
++	nic=$(printf "%06x" $((0x${nic//:/} + val & 0xffffff)) | sed 's/^\(.\{2\}\)\(.\{2\}\)\(.\{2\}\)/\1:\2:\3/')
+ 	echo $oui:$nic
+ }
+ 
+-- 
+2.24.1
+

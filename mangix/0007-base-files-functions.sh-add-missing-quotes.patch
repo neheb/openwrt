@@ -1,0 +1,144 @@
+From 4d37cb1f84f22a06bcec90ceda16e95cc56e032c Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Sun, 12 Jan 2020 21:18:44 -0800
+Subject: [PATCH 7/8] base-files/functions.sh: add missing quotes
+
+https://github.com/koalaman/shellcheck/wiki/Sc2086
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ package/base-files/files/lib/functions.sh | 42 +++++++++++------------
+ 1 file changed, 21 insertions(+), 21 deletions(-)
+
+diff --git a/package/base-files/files/lib/functions.sh b/package/base-files/files/lib/functions.sh
+index 048bfd2b2a..6a99d52077 100755
+--- a/package/base-files/files/lib/functions.sh
++++ b/package/base-files/files/lib/functions.sh
+@@ -92,7 +92,7 @@ list() {
+ 	local len
+ 
+ 	config_get len "$CONFIG_SECTION" "${varname}_LENGTH" 0
+-	[ $len = 0 ] && append CONFIG_LIST_STATE "${CONFIG_SECTION}_${varname}"
++	[ "$len" = 0 ] && append CONFIG_LIST_STATE "${CONFIG_SECTION}_${varname}"
+ 	len=$((len + 1))
+ 	config_set "$CONFIG_SECTION" "${varname}_ITEM$len" "$value"
+ 	config_set "$CONFIG_SECTION" "${varname}_LENGTH" "$len"
+@@ -201,10 +201,10 @@ add_group_and_user() {
+ 			local uid gid uname gname
+ 
+ 			IFS=":"
+-			set -- $tuple; uname="$1"; gname="$2"
++			set -- "$tuple"; uname="$1"; gname="$2"
+ 			IFS="="
+-			set -- $uname; uname="$1"; uid="$2"
+-			set -- $gname; gname="$1"; gid="$2"
++			set -- "$uname"; uname="$1"; uid="$2"
++			set -- "$gname"; gname="$1"; gid="$2"
+ 			IFS="$oIFS"
+ 
+ 			if [ -n "$gname" ] && [ -n "$gid" ]; then
+@@ -240,8 +240,8 @@ default_postinst() {
+ 	fi
+ 
+ 	if [ -d "$root/rootfs-overlay" ]; then
+-		cp -R $root/rootfs-overlay/. $root/
+-		rm -fR $root/rootfs-overlay/
++		cp -R "$root/rootfs-overlay/." "$root/"
++		rm -fR "$root/rootfs-overlay/"
+ 	fi
+ 
+ 	if [ -z "$root" ]; then
+@@ -285,7 +285,7 @@ include() {
+ 
+ 	for file in "$1"/*.sh; do
+ 		[ -e "$file" ] || break
+-		. $file
++		. "$file"
+ 	done
+ }
+ 
+@@ -293,7 +293,7 @@ find_mtd_index() {
+ 	local PART="$(grep "\"$1\"" /proc/mtd | awk -F: '{print $1}')"
+ 	local INDEX="${PART##mtd}"
+ 
+-	echo ${INDEX}
++	echo "${INDEX}"
+ }
+ 
+ find_mtd_part() {
+@@ -310,37 +310,37 @@ group_add() {
+ 	local rc
+ 	[ -f "${IPKG_INSTROOT}/etc/group" ] || return 1
+ 	[ -n "$IPKG_INSTROOT" ] || lock /var/lock/group
+-	echo "${name}:x:${gid}:" >> ${IPKG_INSTROOT}/etc/group
++	echo "${name}:x:${gid}:" >> "${IPKG_INSTROOT}/etc/group"
+ 	[ -n "$IPKG_INSTROOT" ] || lock -u /var/lock/group
+ }
+ 
+ group_exists() {
+-	grep -qs "^${1}:" ${IPKG_INSTROOT}/etc/group
++	grep -qs "^${1}:" "${IPKG_INSTROOT}/etc/group"
+ }
+ 
+ group_add_next() {
+ 	local gid gids
+-	gid=$(grep -s "^${1}:" ${IPKG_INSTROOT}/etc/group | cut -d: -f3)
++	gid=$(grep -s "^${1}:" "${IPKG_INSTROOT}/etc/group" | cut -d: -f3)
+ 	if [ -n "$gid" ]; then
+-		echo $gid
++		echo "$gid"
+ 		return
+ 	fi
+-	gids=$(cut -d: -f3 ${IPKG_INSTROOT}/etc/group)
++	gids=$(cut -d: -f3 "${IPKG_INSTROOT}/etc/group")
+ 	gid=65536
+ 	while echo "$gids" | grep -q "^$gid$"; do
+ 	        gid=$((gid + 1))
+ 	done
+-	group_add $1 $gid
+-	echo $gid
++	group_add "$1" "$gid"
++	echo "$gid"
+ }
+ 
+ group_add_user() {
+ 	local grp delim=","
+-	grp=$(grep -s "^${1}:" ${IPKG_INSTROOT}/etc/group)
++	grp=$(grep -s "^${1}:" "${IPKG_INSTROOT}/etc/group")
+ 	echo "$grp" | cut -d: -f4 | grep -q $2 || return
+ 	echo "$grp" | grep -q ":$" || delim=""
+ 	[ -n "$IPKG_INSTROOT" ] || lock /var/lock/passwd
+-	sed -i "s/$grp/$grp$delim$2/g" ${IPKG_INSTROOT}/etc/group
++	sed -i "s/$grp/$grp$delim$2/g" "${IPKG_INSTROOT}/etc/group"
+ 	[ -n "$IPKG_INSTROOT" ] || lock -u /var/lock/passwd
+ }
+ 
+@@ -353,7 +353,7 @@ user_add() {
+ 	local shell="${6:-/bin/false}"
+ 	local rc
+ 	[ -z "$uid" ] && {
+-		uids=$(cut -d: -f3 ${IPKG_INSTROOT}/etc/passwd)
++		uids=$(cut -d: -f3 "${IPKG_INSTROOT}/etc/passwd")
+ 		uid=65536
+ 		while echo "$uids" | grep -q "^$uid$"; do
+ 		        uid=$((uid + 1))
+@@ -362,13 +362,13 @@ user_add() {
+ 	[ -z "$gid" ] && gid=$uid
+ 	[ -f "${IPKG_INSTROOT}/etc/passwd" ] || return 1
+ 	[ -n "$IPKG_INSTROOT" ] || lock /var/lock/passwd
+-	echo "${name}:x:${uid}:${gid}:${desc}:${home}:${shell}" >> ${IPKG_INSTROOT}/etc/passwd
+-	echo "${name}:x:0:0:99999:7:::" >> ${IPKG_INSTROOT}/etc/shadow
++	echo "${name}:x:${uid}:${gid}:${desc}:${home}:${shell}" >> "${IPKG_INSTROOT}/etc/passwd"
++	echo "${name}:x:0:0:99999:7:::" >> "${IPKG_INSTROOT}/etc/shadow"
+ 	[ -n "$IPKG_INSTROOT" ] || lock -u /var/lock/passwd
+ }
+ 
+ user_exists() {
+-	grep -qs "^${1}:" ${IPKG_INSTROOT}/etc/passwd
++	grep -qs "^${1}:" "${IPKG_INSTROOT}/etc/passwd"
+ }
+ 
+ board_name() {
+-- 
+2.24.1
+
