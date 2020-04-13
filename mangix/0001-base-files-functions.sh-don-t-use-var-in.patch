@@ -1,0 +1,48 @@
+From 3a99ea454ebcce52405ab93d3e1122dd095db9f1 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Sun, 12 Jan 2020 20:25:49 -0800
+Subject: [PATCH 1/8] base-files/functions.sh: don't use $var in $(())
+
+It's not needed. It can also lead to subtle bugs.
+
+https://github.com/koalaman/shellcheck/wiki/Sc2004
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ package/base-files/files/lib/functions.sh | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/package/base-files/files/lib/functions.sh b/package/base-files/files/lib/functions.sh
+index 81176431d1..b118c8368c 100755
+--- a/package/base-files/files/lib/functions.sh
++++ b/package/base-files/files/lib/functions.sh
+@@ -70,7 +70,7 @@ config () {
+ 	local cfgtype="$1"
+ 	local name="$2"
+ 
+-	export ${NO_EXPORT:+-n} CONFIG_NUM_SECTIONS=$(($CONFIG_NUM_SECTIONS + 1))
++	export ${NO_EXPORT:+-n} CONFIG_NUM_SECTIONS=$((CONFIG_NUM_SECTIONS + 1))
+ 	name="${name:-cfg$CONFIG_NUM_SECTIONS}"
+ 	append CONFIG_SECTIONS "$name"
+ 	export ${NO_EXPORT:+-n} CONFIG_SECTION="$name"
+@@ -93,7 +93,7 @@ list() {
+ 
+ 	config_get len "$CONFIG_SECTION" "${varname}_LENGTH" 0
+ 	[ $len = 0 ] && append CONFIG_LIST_STATE "${CONFIG_SECTION}_${varname}"
+-	len=$(($len + 1))
++	len=$((len + 1))
+ 	config_set "$CONFIG_SECTION" "${varname}_ITEM$len" "$value"
+ 	config_set "$CONFIG_SECTION" "${varname}_LENGTH" "$len"
+ 	append "CONFIG_${CONFIG_SECTION}_${varname}" "$value" "$LIST_SEP"
+@@ -162,7 +162,7 @@ config_list_foreach() {
+ 	while [ $c -le "$len" ]; do
+ 		config_get val "${section}" "${option}_ITEM$c"
+ 		eval "$function \"\$val\" \"\$@\""
+-		c="$(($c + 1))"
++		c="$((c + 1))"
+ 	done
+ }
+ 
+-- 
+2.24.1
+
