@@ -1,0 +1,31 @@
+From f7793399b78e91643774b2cd822c32d8c30ab9d4 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Sun, 12 Jan 2020 21:05:53 -0800
+Subject: [PATCH 6/8] base-files/functions.sh: do not iterate over ls
+
+It does word splitting and glob expansion, which is undesirable.
+
+https://github.com/koalaman/shellcheck/wiki/SC2045
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ package/base-files/files/lib/functions.sh | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/package/base-files/files/lib/functions.sh b/package/base-files/files/lib/functions.sh
+index 82a2169260..048bfd2b2a 100755
+--- a/package/base-files/files/lib/functions.sh
++++ b/package/base-files/files/lib/functions.sh
+@@ -283,7 +283,8 @@ default_postinst() {
+ include() {
+ 	local file
+ 
+-	for file in $(ls $1/*.sh 2>/dev/null); do
++	for file in "$1"/*.sh; do
++		[ -e "$file" ] || break
+ 		. $file
+ 	done
+ }
+-- 
+2.24.1
+
