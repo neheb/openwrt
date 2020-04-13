@@ -1,0 +1,39 @@
+From f6c2b206c1df04341a56cc0cad9e464aebdf7e08 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Sun, 12 Jan 2020 20:49:05 -0800
+Subject: [PATCH 4/8] base-files/functions.sh: remove useless cat
+
+The cut command can take a file as an input.
+
+https://github.com/koalaman/shellcheck/wiki/SC2002
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ package/base-files/files/lib/functions.sh | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/package/base-files/files/lib/functions.sh b/package/base-files/files/lib/functions.sh
+index a8a4734413..b7a230f829 100755
+--- a/package/base-files/files/lib/functions.sh
++++ b/package/base-files/files/lib/functions.sh
+@@ -324,7 +324,7 @@ group_add_next() {
+ 		echo $gid
+ 		return
+ 	fi
+-	gids=$(cat ${IPKG_INSTROOT}/etc/group | cut -d: -f3)
++	gids=$(cut -d: -f3 ${IPKG_INSTROOT}/etc/group)
+ 	gid=65536
+ 	while echo "$gids" | grep -q "^$gid$"; do
+ 	        gid=$((gid + 1))
+@@ -352,7 +352,7 @@ user_add() {
+ 	local shell="${6:-/bin/false}"
+ 	local rc
+ 	[ -z "$uid" ] && {
+-		uids=$(cat ${IPKG_INSTROOT}/etc/passwd | cut -d: -f3)
++		uids=$(cut -d: -f3 ${IPKG_INSTROOT}/etc/passwd)
+ 		uid=65536
+ 		while echo "$uids" | grep -q "^$uid$"; do
+ 		        uid=$((uid + 1))
+-- 
+2.24.1
+
