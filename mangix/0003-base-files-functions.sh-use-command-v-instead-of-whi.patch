@@ -1,0 +1,40 @@
+From e2b762fdfd3d67eee261e7d1ce6e145ca772c886 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Sun, 12 Jan 2020 20:44:08 -0800
+Subject: [PATCH 3/8] base-files/functions.sh: use command -v instead of
+ $(which)
+
+$(which) must be executed. command -v is a shell builtin.
+
+https://github.com/koalaman/shellcheck/wiki/SC2230
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ package/base-files/files/lib/functions.sh | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/package/base-files/files/lib/functions.sh b/package/base-files/files/lib/functions.sh
+index 0e94162a1a..a8a4734413 100755
+--- a/package/base-files/files/lib/functions.sh
++++ b/package/base-files/files/lib/functions.sh
+@@ -176,7 +176,7 @@ default_prerm() {
+ 		ret=$?
+ 	fi
+ 
+-	local shell="$(which bash)"
++	local shell="command -v bash"
+ 	for i in $(grep -s "^/etc/init.d/" "$root/usr/lib/opkg/info/${pkgname}.list"); do
+ 		if [ -n "$root" ]; then
+ 			${shell:-/bin/sh} "$root/etc/rc.common" "$root$i" disable
+@@ -265,7 +265,7 @@ default_postinst() {
+ 		rm -f /tmp/luci-indexcache
+ 	fi
+ 
+-	local shell="$(which bash)"
++	local shell="command -v bash"
+ 	for i in $(grep -s "^/etc/init.d/" "$root$filelist"); do
+ 		if [ -n "$root" ]; then
+ 			${shell:-/bin/sh} "$root/etc/rc.common" "$root$i" enable
+-- 
+2.24.1
+

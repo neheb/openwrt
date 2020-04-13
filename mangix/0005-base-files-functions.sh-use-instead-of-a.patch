@@ -1,0 +1,36 @@
+From 08732b2400d626516e8b19c6607dc92a6b3f3039 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Sun, 12 Jan 2020 21:02:02 -0800
+Subject: [PATCH 5/8] base-files/functions.sh: use && instead of -a
+
+-a is not well defined.
+
+https://github.com/koalaman/shellcheck/wiki/SC2166
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ package/base-files/files/lib/functions.sh | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/package/base-files/files/lib/functions.sh b/package/base-files/files/lib/functions.sh
+index b7a230f829..82a2169260 100755
+--- a/package/base-files/files/lib/functions.sh
++++ b/package/base-files/files/lib/functions.sh
+@@ -143,7 +143,7 @@ config_foreach() {
+ 	[ -z "$CONFIG_SECTIONS" ] && return 0
+ 	for section in ${CONFIG_SECTIONS}; do
+ 		config_get cfgtype "$section" TYPE
+-		[ -n "$___type" -a "x$cfgtype" != "x$___type" ] && continue
++		[ -n "$___type" ] && [ "x$cfgtype" != "x$___type" ] && continue
+ 		eval "$___function \"\$section\" \"\$@\""
+ 	done
+ }
+@@ -374,4 +374,4 @@ board_name() {
+ 	[ -e /tmp/sysinfo/board_name ] && cat /tmp/sysinfo/board_name || echo "generic"
+ }
+ 
+-[ -z "$IPKG_INSTROOT" -a -f /lib/config/uci.sh ] && . /lib/config/uci.sh
++[ -z "$IPKG_INSTROOT" ] && [ -f /lib/config/uci.sh ] && . /lib/config/uci.sh
+-- 
+2.24.1
+

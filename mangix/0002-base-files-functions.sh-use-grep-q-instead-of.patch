@@ -1,0 +1,52 @@
+From fe05ac9fbda960976a027bab61cf0059878f15a0 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Sun, 12 Jan 2020 20:38:48 -0800
+Subject: [PATCH 2/8] base-files/functions.sh: use grep -q instead of []
+
+It's cleaner and faster as it does not need to do extra work.
+
+Also removed $() to avoid executing the output. The shell can handle it.
+
+https://github.com/koalaman/shellcheck/wiki/SC2143
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ package/base-files/files/lib/functions.sh | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/package/base-files/files/lib/functions.sh b/package/base-files/files/lib/functions.sh
+index b118c8368c..0e94162a1a 100755
+--- a/package/base-files/files/lib/functions.sh
++++ b/package/base-files/files/lib/functions.sh
+@@ -326,7 +326,7 @@ group_add_next() {
+ 	fi
+ 	gids=$(cat ${IPKG_INSTROOT}/etc/group | cut -d: -f3)
+ 	gid=65536
+-	while [ -n "$(echo "$gids" | grep "^$gid$")" ] ; do
++	while echo "$gids" | grep -q "^$gid$"; do
+ 	        gid=$((gid + 1))
+ 	done
+ 	group_add $1 $gid
+@@ -336,8 +336,8 @@ group_add_next() {
+ group_add_user() {
+ 	local grp delim=","
+ 	grp=$(grep -s "^${1}:" ${IPKG_INSTROOT}/etc/group)
+-	[ -z "$(echo $grp | cut -d: -f4 | grep $2)" ] || return
+-	[ -n "$(echo $grp | grep ":$")" ] && delim=""
++	echo "$grp" | cut -d: -f4 | grep -q $2 || return
++	echo "$grp" | grep -q ":$" || delim=""
+ 	[ -n "$IPKG_INSTROOT" ] || lock /var/lock/passwd
+ 	sed -i "s/$grp/$grp$delim$2/g" ${IPKG_INSTROOT}/etc/group
+ 	[ -n "$IPKG_INSTROOT" ] || lock -u /var/lock/passwd
+@@ -354,7 +354,7 @@ user_add() {
+ 	[ -z "$uid" ] && {
+ 		uids=$(cat ${IPKG_INSTROOT}/etc/passwd | cut -d: -f3)
+ 		uid=65536
+-		while [ -n "$(echo "$uids" | grep "^$uid$")" ] ; do
++		while echo "$uids" | grep -q "^$uid$"; do
+ 		        uid=$((uid + 1))
+ 		done
+ 	}
+-- 
+2.24.1
+
