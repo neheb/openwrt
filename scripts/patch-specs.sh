@@ -3,7 +3,7 @@
 DIR="$1"
 
 if [ -d "$DIR" ]; then
-	DIR="$(cd "$DIR"; pwd)"
+	DIR="$(cd "$DIR" || exit 1; pwd)"
 else
 	echo "Usage: $0 toolchain-dir"
 	exit 1
