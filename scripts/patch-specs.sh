@@ -31,7 +31,7 @@ patch_specs() {
 	for lib in $(STAGING_DIR="$DIR" "$CPP" -x c -v /dev/null 2>&1 | sed -ne 's#:# #g; s#^LIBRARY_PATH=##p'); do
 		if [ -d "$lib" ]; then
 			grep -qs "STAGING_DIR" "$lib/specs" && rm -f "$lib/specs"
-			if [ $found -lt 1 ]; then
+			if [ "$found" -lt 1 ]; then
 				printf "Patching specs ... "
 				STAGING_DIR="$DIR" "$CPP" -dumpspecs | awk '
 					mode ~ "link" {
@@ -57,7 +57,7 @@ patch_specs() {
 		fi
 	done
 
-	[ $found -gt 0 ]
+	[ "$found" -gt 0 ]
 	return $?
 }
 
