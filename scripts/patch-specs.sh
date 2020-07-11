@@ -9,7 +9,7 @@ else
 	exit 1
 fi
 
-echo -n "Locating cpp ... "
+printf "Locating cpp ... "
 for bin in bin usr/bin usr/local/bin; do
 	for cmd in "$DIR/$bin/"*-cpp; do
 		if [ -x "$cmd" ]; then
@@ -32,7 +32,7 @@ patch_specs() {
 		if [ -d "$lib" ]; then
 			grep -qs "STAGING_DIR" "$lib/specs" && rm -f "$lib/specs"
 			if [ $found -lt 1 ]; then
-				echo -n "Patching specs ... "
+				printf "Patching specs ... "
 				STAGING_DIR="$DIR" "$CPP" -dumpspecs | awk '
 					mode ~ "link" {
 						sub(/(%@?\{L.\})/, "& -L %:getenv(STAGING_DIR /usr/lib) -rpath-link %:getenv(STAGING_DIR /usr/lib)")
@@ -68,7 +68,7 @@ VERSION="${VERSION:-unknown}"
 case "${VERSION##* }" in
 	2.*|3.*|4.0.*|4.1.*|4.2.*)
 		echo "The compiler version does not support getenv() in spec files."
-		echo -n "Wrapping binaries instead ... "
+		printf "Wrapping binaries instead ... "
 
 		if "${0%/*}/ext-toolchain.sh" --toolchain "$DIR" --wrap "${CPP%/*}"; then
 			echo "ok"
