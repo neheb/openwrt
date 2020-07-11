@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # tftp flash script for wireless routers
 #
