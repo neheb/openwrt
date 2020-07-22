@@ -1,0 +1,11 @@
+--- a/service.c
++++ b/service.c
+@@ -239,7 +239,7 @@ service_load_blob(struct blob_attr *b)
+ 		return;
+ 
+ 	s->port = blobmsg_get_u32(_tb[SERVICE_PORT]);
+-	s->id = strncpy(d_id, blobmsg_name(b), n);
++	s->id = memcpy(d_id, blobmsg_name(b), n);
+ 	if (_tb[SERVICE_INSTANCE])
+ 		s->instance = strcpy(d_instance, blobmsg_get_string(_tb[SERVICE_INSTANCE]));
+ 	else
