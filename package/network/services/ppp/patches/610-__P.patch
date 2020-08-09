@@ -1,0 +1,14 @@
+--- a/pppd/pppd.h
++++ b/pppd/pppd.h
+@@ -61,9 +61,11 @@
+ 
+ #if defined(__STDC__)
+ #include <stdarg.h>
++#define __P(x)	x
+ #define __V(x)	x
+ #else
+ #include <varargs.h>
++#define __P(x)	()
+ #define __V(x)	(va_alist) va_dcl
+ #define const
+ #define volatile
