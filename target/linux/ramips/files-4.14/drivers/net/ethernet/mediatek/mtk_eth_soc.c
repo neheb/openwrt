@@ -315,7 +315,8 @@ no_rx_mem:
 	return -ENOMEM;
 }
 
-static void fe_txd_unmap(struct device *dev, struct fe_tx_buf *tx_buf)
+static void fe_txd_unmap(struct device *dev, struct fe_tx_buf *tx_buf,
+			 bool napi)
 {
 	if (dma_unmap_len(tx_buf, dma_len0))
 		dma_unmap_page(dev,
@@ -331,8 +332,13 @@ static void fe_txd_unmap(struct device *dev, struct fe_tx_buf *tx_buf)
 
 	dma_unmap_len_set(tx_buf, dma_addr0, 0);
 	dma_unmap_len_set(tx_buf, dma_addr1, 0);
-	if (tx_buf->skb && (tx_buf->skb != (struct sk_buff *)DMA_DUMMY_DESC))
-		dev_kfree_skb_any(tx_buf->skb);
+	if (tx_buf->skb &&
+	   (tx_buf->skb != (struct sk_buff *)DMA_DUMMY_DESC)) {
+		if (napi)
+			napi_consume_skb(tx_buf->skb, napi);
+		else
+			dev_kfree_skb_any(tx_buf->skb);
+	}
 	tx_buf->skb = NULL;
 }
 
@@ -344,7 +350,7 @@ static void fe_clean_tx(struct fe_priv *priv)
 
 	if (ring->tx_buf) {
 		for (i = 0; i < ring->tx_ring_size; i++)
-			fe_txd_unmap(dev, &ring->tx_buf[i]);
+			fe_txd_unmap(dev, &ring->tx_buf[i], false);
 		kfree(ring->tx_buf);
 		ring->tx_buf = NULL;
 	}
@@ -761,7 +767,7 @@ err_dma:
 	j = ring->tx_next_idx;
 	for (i = 0; i < tx_num; i++) {
 		/* unmap dma */
-		fe_txd_unmap(&dev->dev, &ring->tx_buf[j]);
+		fe_txd_unmap(&dev->dev, &ring->tx_buf[j], false);
 		ring->tx_dma[j].txd2 = TX_DMA_DESP2_DEF;
 
 		j = NEXT_TX_DESP_IDX(j);
@@ -1001,7 +1007,7 @@ static int fe_poll_tx(struct fe_priv *priv, int budget, u32 tx_intr,
 			done++;
 			budget--;
 		}
-		fe_txd_unmap(dev, tx_buf);
+		fe_txd_unmap(dev, tx_buf, true);
 		idx = NEXT_TX_DESP_IDX(idx);
 	}
 	ring->tx_free_idx = idx;
