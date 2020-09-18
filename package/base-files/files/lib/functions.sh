@@ -91,7 +91,7 @@ list() {
 	local len
 
 	config_get len "$CONFIG_SECTION" "${varname}_LENGTH" 0
-	[ $len = 0 ] && append CONFIG_LIST_STATE "${CONFIG_SECTION}_${varname}"
+	[ "$len" = 0 ] && append CONFIG_LIST_STATE "${CONFIG_SECTION}_${varname}"
 	len=$((len + 1))
 	config_set "$CONFIG_SECTION" "${varname}_ITEM$len" "$value"
 	config_set "$CONFIG_SECTION" "${varname}_LENGTH" "$len"
@@ -170,7 +170,7 @@ config_list_foreach() {
 
 	config_get len "${section}" "${option}_LENGTH"
 	[ -z "$len" ] && return 0
-	while [ $c -le "$len" ]; do
+	while [ "$c" -le "$len" ]; do
 		config_get val "${section}" "${option}_ITEM$c"
 		eval "$function \"\$val\" \"\$@\""
 		c="$((c + 1))"
