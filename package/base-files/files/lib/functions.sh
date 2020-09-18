@@ -296,8 +296,9 @@ default_postinst() {
 include() {
 	local file
 
-	for file in $(ls $1/*.sh 2>/dev/null); do
-		. $file
+	for file in "$1"/*.sh; do
+		[ -e "$file" ] || break
+		. "$file"
 	done
 }
 
