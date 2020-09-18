@@ -188,7 +188,8 @@ default_prerm() {
 	fi
 
 	local shell="$(command -v bash)"
-	for i in $(grep -s "^/etc/init.d/" "$root/usr/lib/opkg/info/${pkgname}.list"); do
+	grep -s "^/etc/init.d/" "$root/usr/lib/opkg/info/${pkgname}.list" | while IFS= read -r i
+	do
 		if [ -n "$root" ]; then
 			${shell:-/bin/sh} "$root/etc/rc.common" "$root$i" disable
 		else
@@ -266,7 +267,8 @@ default_postinst() {
 
 		if grep -m1 -q -s "^/etc/uci-defaults/" "$filelist"; then
 			[ -d /tmp/.uci ] || mkdir -p /tmp/.uci
-			for i in $(grep -s "^/etc/uci-defaults/" "$filelist"); do
+			grep -s "^/etc/uci-defaults/" "$filelist" | while IFS= read -r i
+			do
 				( [ -f "$i" ] && cd "$(dirname $i)" && . "$i" ) && rm -f "$i"
 			done
 			uci commit
@@ -276,7 +278,8 @@ default_postinst() {
 	fi
 
 	local shell="$(command -v bash)"
-	for i in $(grep -s "^/etc/init.d/" "$root$filelist"); do
+	grep -s "^/etc/init.d/" "$root$filelist" | while IFS= read -r i
+	do
 		if [ -n "$root" ]; then
 			${shell:-/bin/sh} "$root/etc/rc.common" "$root$i" enable
 		else
