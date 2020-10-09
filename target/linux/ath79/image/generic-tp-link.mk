@@ -1,5 +1,17 @@
 include ./common-tp-link.mk
 
+define Device/niubi_nb-pr1
+  $(Device/tplink-16mlzma)
+  SOC := qca9531
+  DEVICE_MODEL := NB-PR1
+  DEVICE_VARIANT := v1
+  DEVICE_TITLE := NiuBi Pocket Router One
+  DEVICE_PACKAGES := kmod-usb-core kmod-usb2 uboot-envtools
+  TPLINK_BOARD_ID := NB-PR1
+  BOARDNAME = NB-PR1
+endef
+TARGET_DEVICES += niubi_nb-pr1
+
 define Device/tplink_archer-a7-v5
   $(Device/tplink-safeloader-uimage)
   SOC := qca9563
