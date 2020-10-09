@@ -96,6 +96,11 @@ ubnt,uk-ultra)
 	ucidef_add_gpio_switch "ant0_internal" "ANT0 Internal" "517" "1"
 	ucidef_add_gpio_switch "ant1_internal" "ANT1 Internal" "518" "1"
 	;;
+niubi,nb-pr1)
+	ucidef_add_gpio_switch "io1" "IO#1" "513"
+	ucidef_add_gpio_switch "io2" "IO#2" "514"
+	ucidef_add_gpio_switch "io3" "IO#3" "515"
+	;;
 zbtlink,zbt-wd323)
 	ucidef_add_gpio_switch "io0" "IO#0" "512"
 	ucidef_add_gpio_switch "io1" "IO#1" "513"

@@ -326,6 +326,10 @@ netgear,wnr2200-16m)
 	ucidef_set_led_switch "lan3amber" "LAN3 (amber)" "amber:lan3" "switch0" "0x08" "0x02"
 	ucidef_set_led_switch "lan4amber" "LAN4 (amber)" "amber:lan4" "switch0" "0x10" "0x02"
 	;;
+niubi,nb-pr1)
+	ucidef_set_led_default "status" "STATUS" "green:status" "0"
+	ucidef_set_led_wlan "wlan" "WLAN" "blue:wlan" "phy0tpt"
+	;;
 openmesh,om2p-v4|\
 openmesh,om2p-hs-v4)
 	ucidef_set_led_netdev "wan" "WAN" "blue:wan" "eth0"

@@ -58,6 +58,7 @@ ath79_setup_interfaces()
 	netgear,ex7300|\
 	netgear,ex7300-v2|\
 	netgear,wndap360|\
+	niubi,nb-pr1|\
 	ocedo,koala|\
 	ocedo,raccoon|\
 	onion,omega|\
