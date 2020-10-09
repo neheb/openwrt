@@ -89,6 +89,11 @@ ubnt,nanostation-m)
 ubnt,nanostation-m-xw)
 	ucidef_add_gpio_switch "poe_passthrough" "PoE Passthrough" "2"
 	;;
+niubi,nb-pr1)
+	ucidef_add_gpio_switch "io1" "IO#1" "1"
+	ucidef_add_gpio_switch "io2" "IO#2" "2"
+	ucidef_add_gpio_switch "io3" "IO#3" "3"
+	;;
 zbtlink,zbt-wd323)
 	ucidef_add_gpio_switch "io0" "IO#0" "0"
 	ucidef_add_gpio_switch "io1" "IO#1" "1"
