@@ -244,6 +244,10 @@ openmesh,om2p-v4|\
 openmesh,om2p-hs-v4)
 	ucidef_set_led_netdev "wan" "WAN" "blue:wan" "eth0"
 	ucidef_set_led_switch "lan" "LAN" "blue:lan" "switch0" "0x02"
+niubi,nb-pr1)
+	ucidef_set_led_default "status" "STATUS" "$board:red:status" "0"
+	ucidef_set_led_netdev "lan" "LAN" "$board:green:eth" "eth0" "tx rx"
+	ucidef_set_led_wlan "wlan" "WLAN" "$board:blue:wifi" "phy0tpt"
 	;;
 pcs,cr3000)
 	ucidef_set_led_netdev "wan" "WAN" "blue:wan" "eth1"
