@@ -26,6 +26,7 @@ define Package/argp-standalone
   CATEGORY:=Libraries
   TITLE:=Hierarchial argument parsing broken out from glibc
   URL:=http://www.lysator.liu.se/~nisse/misc/
+  BUILDONLY:=1
 endef
 
 define Package/argp-standalone/description
