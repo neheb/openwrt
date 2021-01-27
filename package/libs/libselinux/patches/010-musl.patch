@@ -1,0 +1,15 @@
+--- a/src/procattr.c
++++ b/src/procattr.c
+@@ -24,11 +24,7 @@ static __thread char destructor_initiali
+ 
+ /* Bionic and glibc >= 2.30 declare gettid() system call wrapper in unistd.h and
+  * has a definition for it */
+-#ifdef __BIONIC__
+-  #define OVERRIDE_GETTID 0
+-#elif !defined(__GLIBC_PREREQ)
+-  #define OVERRIDE_GETTID 1
+-#elif !__GLIBC_PREREQ(2,30)
++#if defined (__GLIBC_MINOR__) && (__GLIBC_MINOR__ < 30)
+   #define OVERRIDE_GETTID 1
+ #else
+   #define OVERRIDE_GETTID 0
