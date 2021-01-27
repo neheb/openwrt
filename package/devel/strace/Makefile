@@ -23,6 +23,7 @@ PKG_CPE_ID:=cpe:/a:paul_kranenburg:strace
 
 PKG_FIXUP:=autoreconf
 PKG_INSTALL:=1
+PKG_BUILD_PARALLEL:=1
 
 PKG_CONFIG_DEPENDS := \
 	CONFIG_STRACE_LIBDW \
