@@ -1,0 +1,110 @@
+From 3d711a382735d2c34d3ba2075a5aa83a894f4a57 Mon Sep 17 00:00:00 2001
+From: Rui Salvaterra <rsalvaterra@gmail.com>
+Date: Mon, 14 Dec 2020 19:14:35 -0800
+Subject: [PATCH] zram: break the strict dependency from lzo
+
+From the beginning, the zram block device always enabled CRYPTO_LZO,
+since lzo-rle is hardcoded as the fallback compression algorithm.  As a
+consequence, on systems where another compression algorithm is chosen
+(e.g.  CRYPTO_ZSTD), the lzo kernel module becomes unused, while still
+having to be built/loaded.
+
+This patch removes the hardcoded lzo-rle dependency and allows the user
+to select the default compression algorithm for zram at build time.  The
+previous behaviour is kept, as the default algorithm is still lzo-rle.
+
+Link: https://lkml.kernel.org/r/20201207121245.50529-1-rsalvaterra@gmail.com
+Signed-off-by: Rui Salvaterra <rsalvaterra@gmail.com>
+Suggested-by: Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>
+Suggested-by: Minchan Kim <minchan@kernel.org>
+Acked-by: Minchan Kim <minchan@kernel.org>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ drivers/block/zram/Kconfig    | 42 ++++++++++++++++++++++++++++++++++-
+ drivers/block/zram/zcomp.c    |  2 ++
+ drivers/block/zram/zram_drv.c |  2 +-
+ 3 files changed, 44 insertions(+), 2 deletions(-)
+
+--- a/drivers/block/zram/Kconfig
++++ b/drivers/block/zram/Kconfig
+@@ -2,7 +2,7 @@
+ config ZRAM
+ 	tristate "Compressed RAM block device support"
+ 	depends on BLOCK && SYSFS && ZSMALLOC && CRYPTO
+-	select CRYPTO_LZO
++	depends on CRYPTO_LZO || CRYPTO_ZSTD || CRYPTO_LZ4 || CRYPTO_LZ4HC || CRYPTO_842
+ 	help
+ 	  Creates virtual block devices called /dev/zramX (X = 0, 1, ...).
+ 	  Pages written to these disks are compressed and stored in memory
+@@ -14,6 +14,46 @@ config ZRAM
+ 
+ 	  See Documentation/admin-guide/blockdev/zram.rst for more information.
+ 
++choice
++	prompt "Default zram compressor"
++	default ZRAM_DEF_COMP_LZORLE
++	depends on ZRAM
++
++config ZRAM_DEF_COMP_LZORLE
++	bool "lzo-rle"
++	depends on CRYPTO_LZO
++
++config ZRAM_DEF_COMP_ZSTD
++	bool "zstd"
++	depends on CRYPTO_ZSTD
++
++config ZRAM_DEF_COMP_LZ4
++	bool "lz4"
++	depends on CRYPTO_LZ4
++
++config ZRAM_DEF_COMP_LZO
++	bool "lzo"
++	depends on CRYPTO_LZO
++
++config ZRAM_DEF_COMP_LZ4HC
++	bool "lz4hc"
++	depends on CRYPTO_LZ4HC
++
++config ZRAM_DEF_COMP_842
++	bool "842"
++	depends on CRYPTO_842
++
++endchoice
++
++config ZRAM_DEF_COMP
++	string
++	default "lzo-rle" if ZRAM_DEF_COMP_LZORLE
++	default "zstd" if ZRAM_DEF_COMP_ZSTD
++	default "lz4" if ZRAM_DEF_COMP_LZ4
++	default "lzo" if ZRAM_DEF_COMP_LZO
++	default "lz4hc" if ZRAM_DEF_COMP_LZ4HC
++	default "842" if ZRAM_DEF_COMP_842
++
+ config ZRAM_WRITEBACK
+        bool "Write back incompressible or idle page to backing device"
+        depends on ZRAM
+--- a/drivers/block/zram/zcomp.c
++++ b/drivers/block/zram/zcomp.c
+@@ -15,8 +15,10 @@
+ #include "zcomp.h"
+ 
+ static const char * const backends[] = {
++#if IS_ENABLED(CONFIG_CRYPTO_LZO)
+ 	"lzo",
+ 	"lzo-rle",
++#endif
+ #if IS_ENABLED(CONFIG_CRYPTO_LZ4)
+ 	"lz4",
+ #endif
+--- a/drivers/block/zram/zram_drv.c
++++ b/drivers/block/zram/zram_drv.c
+@@ -42,7 +42,7 @@ static DEFINE_IDR(zram_index_idr);
+ static DEFINE_MUTEX(zram_index_mutex);
+ 
+ static int zram_major;
+-static const char *default_compressor = "lzo-rle";
++static const char *default_compressor = CONFIG_ZRAM_DEF_COMP;
+ 
+ /* Module params (documentation at end) */
+ static unsigned int num_devices = 1;
