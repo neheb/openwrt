@@ -35,9 +35,6 @@ ifeq ($(ARCH),mips64)
   ifdef CONFIG_MIPS64_ABI_N32
     TARGET_CFLAGS += -mabi=n32
   endif
-  ifdef CONFIG_MIPS64_ABI_O32
-    TARGET_CFLAGS += -mabi=32
-  endif
 endif
 
 # -Os miscompiles w. 2.24 gcc5/gcc6

@@ -193,18 +193,13 @@ menuconfig EXTRA_TARGET_ARCH
 		prompt "MIPS64 user-land ABI" if TOOLCHAINOPTS && (mips64 || mips64el)
 		default MIPS64_ABI_N64
 		help
-		   MIPS64 supports 3 different user-land ABIs: o32 (legacy),
-		   n32 and n64.
+		   MIPS64 supports 2 different user-land ABIs: n32 and n64.
 
 		config MIPS64_ABI_N64
 			bool "n64"
 
 		config MIPS64_ABI_N32
-			depends on !LIBC_USE_MUSL
 			bool "n32"
-
-		config MIPS64_ABI_O32
-			bool "o32"
 
 	endchoice
 
@@ -294,6 +289,5 @@ config MIPS64_ABI
 	depends on mips64 || mips64el
 	string
 	default "64" if MIPS64_ABI_N64
-	default "n32" if MIPS64_ABI_N32
-	default "32" if MIPS64_ABI_O32
+	default "32" if MIPS64_ABI_N32
 	default "64"
