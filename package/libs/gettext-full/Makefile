@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=gettext-full
 PKG_VERSION:=0.21
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE:=gettext-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@GNU/gettext
@@ -38,7 +38,6 @@ define Package/libintl-full
   ABI_VERSION:=8
 endef
 
-TARGET_CFLAGS += $(FPIC)
 ifneq ($(HOST_OS),Linux)
   TARGET_CFLAGS += -I$(STAGING_DIR_HOSTPKG)/include
 endif
@@ -52,6 +51,7 @@ CONFIGURE_ARGS += \
 	--disable-java \
 	--disable-openmp \
 	--disable-curses \
+	--with-pic \
 	--with-included-gettext \
 	--without-libintl-prefix \
 	--without-libexpat-prefix \
@@ -64,6 +64,7 @@ HOST_CONFIGURE_ARGS += \
 	--disable-rpath \
 	--disable-java \
 	--disable-openmp \
+	--with-pic \
 	--without-emacs \
 	--without-libxml2-prefix
 
@@ -72,8 +73,6 @@ HOST_CONFIGURE_VARS += \
 	am_cv_lib_iconv=no \
 	am_cv_func_iconv=no \
 	ac_cv_header_iconv_h=no \
-
-HOST_CFLAGS += $(HOST_FPIC)
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/lib/libintl-full/include
