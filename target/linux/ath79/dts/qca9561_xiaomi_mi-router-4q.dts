@@ -153,3 +153,13 @@
 		reg = <0x6 0x6>;
 	};
 };
+
+&switch_port3 {
+	status = "okay";
+	label = "lan1";
+};
+
+&switch_port4 {
+	status = "okay";
+	label = "lan2";
+};

@@ -279,27 +279,100 @@
 	reset-names = "mdio";
 	builtin-switch;
 
-	builtin_switch: switch0@1f {
-		compatible = "qca,ar8229";
+	switch10: switch@1f {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		compatible = "qca,ar9344-switch";
 		reg = <0x1f>;
 		resets = <&rst 8>;
 		reset-names = "switch";
-		phy-mode = "gmii";
-		qca,phy4-mii-enable;
-		qca,mib-poll-interval = <500>;
 
-		mdio-bus {
+		interrupt-parent = <&miscintc>;
+		interrupts = <12>;
+
+		interrupt-controller;
+		#interrupt-cells = <1>;
+
+		ports {
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			swphy0: ethernet-phy@0 {
-				reg = <0>;
-				phy-mode = "mii";
+			switch_port0: port@0 {
+				reg = <0x0>;
+				label = "cpu";
+				ethernet = <&eth1>;
+
+				phy-mode = "gmii";
+
+				fixed-link {
+					speed = <1000>;
+					full-duplex;
+				};
 			};
 
-			swphy4: ethernet-phy@4 {
-				reg = <4>;
-				phy-mode = "mii";
+			switch_port1: port@1 {
+				reg = <0x1>;
+				phy-handle = <&swphy0>;
+				phy-mode = "internal";
+
+				status = "disabled";
+			};
+
+			switch_port2: port@2 {
+				reg = <0x2>;
+				phy-handle = <&phy_port1>;
+				phy-mode = "internal";
+
+				status = "disabled";
+			};
+
+			switch_port3: port@3 {
+				reg = <0x3>;
+				phy-handle = <&phy_port2>;
+				phy-mode = "internal";
+
+				status = "disabled";
+			};
+
+			switch_port4: port@4 {
+				reg = <0x4>;
+				phy-handle = <&phy_port3>;
+				phy-mode = "internal";
+
+				status = "disabled";
+			};
+		};
+
+		mdio {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			interrupt-parent = <&switch10>;
+
+			swphy0: phy@0 {
+				reg = <0x0>;
+				interrupts = <0>;
+			};
+
+			phy_port1: phy@1 {
+				reg = <0x1>;
+				interrupts = <0>;
+			};
+
+			phy_port2: phy@2 {
+				reg = <0x2>;
+				interrupts = <0>;
+			};
+
+			phy_port3: phy@3 {
+				reg = <0x3>;
+				interrupts = <0>;
+			};
+
+			swphy4: phy@4 {
+				reg = <0x4>;
+				interrupts = <0>;
 			};
 		};
 	};
