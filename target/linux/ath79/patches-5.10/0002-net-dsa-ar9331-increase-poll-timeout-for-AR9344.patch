@@ -1,0 +1,29 @@
+From e3e848a02771681e19fbaaaad6b91867b98f7302 Mon Sep 17 00:00:00 2001
+From: David Bauer <mail@david-bauer.net>
+Date: Thu, 5 Nov 2020 23:55:07 +0100
+Subject: [PATCH 2/3] net: dsa: ar9331: increase poll timeout for AR9344
+
+The current MDIO polling timeout leads to frequent timeouts on AR9344
+and QCA9561 platforms, leading to frequent erors when probing the
+switch.
+
+Increase the timeout to a tried and tested safe value.
+
+Signed-off-by: David Bauer <mail@david-bauer.net>
+---
+ drivers/net/dsa/qca/ar9331.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+--- a/drivers/net/dsa/qca/ar9331.c
++++ b/drivers/net/dsa/qca/ar9331.c
+@@ -151,8 +151,8 @@
+ #define AR9331_SW_MDIO_PHY_ADDR_M		GENMASK(2, 0)
+ 
+ /* Empirical determined values */
+-#define AR9331_SW_MDIO_POLL_SLEEP_US		1
+-#define AR9331_SW_MDIO_POLL_TIMEOUT_US		20
++#define AR9331_SW_MDIO_POLL_SLEEP_US		10
++#define AR9331_SW_MDIO_POLL_TIMEOUT_US		100
+ 
+ struct ar9331_sw_priv {
+ 	struct device *dev;
