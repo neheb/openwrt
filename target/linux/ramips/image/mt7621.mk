@@ -827,6 +827,24 @@ define Device/linksys_e5600
 endef
 TARGET_DEVICES += linksys_e5600
 
+define Device/linksys_e7350
+  $(Device/dsa-migration)
+  $(Device/uimage-lzma-loader)
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  KERNEL_SIZE := 4096k
+  IMAGE_SIZE := 36864k
+  UBINIZE_OPTS := -E 5
+  DEVICE_VENDOR := Linksys
+  DEVICE_MODEL := E7350
+  LINKSYS_HWNAME := E7350
+  DEVICE_PACKAGES := kmod-mt7915e kmod-usb3 uboot-envtools
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata | check-size
+  IMAGE/factory.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) | \
+	append-ubi | check-size | linksys-image type=$$$$(LINKSYS_HWNAME)
+endef
+TARGET_DEVICES += linksys_e7350
+
 define Device/linksys_ea7xxx
   $(Device/dsa-migration)
   $(Device/uimage-lzma-loader)
