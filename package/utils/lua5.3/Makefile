@@ -78,6 +78,14 @@ endef
 
 TARGET_CFLAGS += -DLUA_USE_LINUX $(FPIC) -std=gnu99
 
+define Build/Prepare
+	$(call Build/Prepare/Default)
+ifeq ($(QUILT),)
+	mv $(PKG_BUILD_DIR)/doc/lua.1 $(PKG_BUILD_DIR)/lua5.3.1
+	mv $(PKG_BUILD_DIR)/doc/luac.1 $(PKG_BUILD_DIR)/luac5.3.1
+endif
+endef
+
 define Build/Compile
 	$(MAKE) $(PKG_JOBS) -C $(PKG_BUILD_DIR) \
 		CC="$(TARGET_CROSS)gcc" \
