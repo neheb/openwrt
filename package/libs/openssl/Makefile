@@ -324,6 +324,13 @@ OPENSSL_TARGET:=linux-$(call qstrip,$(CONFIG_ARCH))-openwrt
 
 STAMP_CONFIGURED := $(STAMP_CONFIGURED)_$(shell echo $(OPENSSL_OPTIONS) | mkhash md5)
 
+define Build/Prepare
+	$(call Build/Prepare/Default)
+ifeq ($(QUILT),)
+	mv $(PKG_BUILD_DIR)/crypto/engine/eng_devcrypto.c $(PKG_BUILD_DIR)/engines/e_devcrypto.c
+endif
+endef
+
 define Build/Configure
 	(cd $(PKG_BUILD_DIR); \
 		./Configure $(OPENSSL_TARGET) \

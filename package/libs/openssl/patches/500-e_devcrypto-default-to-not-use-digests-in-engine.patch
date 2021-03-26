@@ -19,8 +19,8 @@ turn them on if it is safe and fast enough.
 
 Signed-off-by: Eneas U de Queiroz <cote2004-github@yahoo.com>
 
---- a/engines/e_devcrypto.c
-+++ b/engines/e_devcrypto.c
+--- a/crypto/engine/eng_devcrypto.c
++++ b/crypto/engine/eng_devcrypto.c
 @@ -852,7 +852,7 @@ static void prepare_digest_methods(void)
      for (i = 0, known_digest_nids_amount = 0; i < OSSL_NELEM(digest_data);
           i++) {

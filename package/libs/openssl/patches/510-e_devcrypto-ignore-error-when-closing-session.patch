@@ -8,8 +8,8 @@ session.  It may have been closed by another process after a fork.
 
 Signed-off-by: Eneas U de Queiroz <cote2004-github@yahoo.com>
 
---- a/engines/e_devcrypto.c
-+++ b/engines/e_devcrypto.c
+--- a/crypto/engine/eng_devcrypto.c
++++ b/crypto/engine/eng_devcrypto.c
 @@ -195,9 +195,8 @@ static int cipher_init(EVP_CIPHER_CTX *c
          get_cipher_data(EVP_CIPHER_CTX_nid(ctx));
  
