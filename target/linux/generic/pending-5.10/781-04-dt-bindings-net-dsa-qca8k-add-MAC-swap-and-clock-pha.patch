@@ -1,0 +1,29 @@
+From 9fc29729d14e5bf6f0a79f528d78c1c5eb186eb2 Mon Sep 17 00:00:00 2001
+From: Ansuel Smith <ansuelsmth@gmail.com>
+Date: Mon, 1 Mar 2021 12:19:56 +0100
+Subject: dt-bindings: net: dsa: qca8k: Add MAC swap and clock phase properties
+
+Add names and decriptions of additional PORT0_PAD_CTRL properties.
+Document new binding qca,mac6_exchange that exchange the mac0 port
+with mac6.
+qca,sgmii-(rx|tx)clk-falling-edge are for setting the respective clock
+phase to failling edge.
+
+Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
+Signed-off-by: Matthew Hagan <mnhagan88@gmail.com>
+---
+ Documentation/devicetree/bindings/net/dsa/qca8k.txt | 3 ++
+ 1 file changed, 3 insertions(+)
+
+--- a/Documentation/devicetree/bindings/net/dsa/qca8k.txt
++++ b/Documentation/devicetree/bindings/net/dsa/qca8k.txt
+@@ -13,6 +13,9 @@ Required properties:
+ Optional properties:
+ 
+ - reset-gpios: GPIO to be used to reset the whole device
++- qca,mac6-exchange: Internally swap MAC0 and MAC6.
++- qca,sgmii-rxclk-falling-edge: Set the receive clock phase to falling edge.
++- qca,sgmii-txclk-falling-edge: Set the transmit clock phase to falling edge.
+ - qca,rgmii0-1-8v: Set the internal regulator to supply 1.8v for MAC0 port
+ - qca,rgmii56-1-8v: Set the internal regulator to supply 1.8v for MAC5/6 port
+ 

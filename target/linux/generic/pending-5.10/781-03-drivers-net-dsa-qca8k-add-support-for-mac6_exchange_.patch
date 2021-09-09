@@ -1,0 +1,78 @@
+From dc7950eaeedcf29b093ef9f077b0989fdd00fddb Mon Sep 17 00:00:00 2001
+From: Ansuel Smith <ansuelsmth@gmail.com>
+Date: Mon, 1 Mar 2021 12:17:15 +0100
+Subject: net: dsa: qca8k: add support for mac6_exchange, sgmii falling
+edge
+
+Some device set the switch to exchange the mac0 port with mac6 port. Add
+support for this in the qca8k driver. Also add support for SGMII rx/tx
+clock falling edge.
+
+Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
+Signed-off-by: Matthew Hagan <mnhagan88@gmail.com>
+---
+ drivers/net/dsa/qca8k.c | 33 +++++++++++++++++++++++++++++++++
+ drivers/net/dsa/qca8k.h | 3 +++
+ 2 files changed, 36 insertions(+)
+
+--- a/drivers/net/dsa/qca8k.c
++++ b/drivers/net/dsa/qca8k.c
+@@ -959,6 +959,34 @@ qca8k_setup_mac_pwr_sel(struct qca8k_pri
+ }
+ 
+ static int
++qca8k_setup_port0_pad_ctrl_reg(struct qca8k_priv *priv)
++{
++	struct device_node *node = priv->dev->of_node;
++	u32 mask = 0;
++	int ret = 0;
++
++	/* Swap MAC0-MAC6 */
++	if (of_property_read_bool(node, "qca,mac6-exchange"))
++		mask |= QCA8K_PORT0_PAD_CTRL_MAC06_EXCHG;
++
++	/* SGMII Clock phase configuration */
++	if (of_property_read_bool(node, "qca,sgmii-rxclk-falling-edge"))
++		mask |= QCA8K_PORT0_PAD_SGMII_RXCLK_FALLING_EDGE;
++
++	if (of_property_read_bool(node, "qca,sgmii-txclk-falling-edge"))
++		mask |= QCA8K_PORT0_PAD_SGMII_TXCLK_FALLING_EDGE;
++
++	if (mask)
++		ret = qca8k_rmw(priv, QCA8K_REG_PORT0_PAD_CTRL,
++				QCA8K_PORT0_PAD_CTRL_MAC06_EXCHG |
++				QCA8K_PORT0_PAD_SGMII_RXCLK_FALLING_EDGE |
++				QCA8K_PORT0_PAD_SGMII_TXCLK_FALLING_EDGE,
++				mask);
++
++	return ret;
++}
++
++static int
+ qca8k_setup(struct dsa_switch *ds)
+ {
+ 	struct qca8k_priv *priv = (struct qca8k_priv *)ds->priv;
+@@ -991,6 +1019,11 @@ qca8k_setup(struct dsa_switch *ds)
+ 	if (ret)
+ 		return ret;
+ 
++	/* Configure additional PORT0_PAD_CTRL properties */
++	ret = qca8k_setup_port0_pad_ctrl_reg(priv);
++	if (ret)
++		return ret;
++
+ 	/* Enable CPU Port */
+ 	ret = qca8k_reg_set(priv, QCA8K_REG_GLOBAL_FW_CTRL0,
+ 			    QCA8K_GLOBAL_FW_CTRL0_CPU_PORT_EN);
+--- a/drivers/net/dsa/qca8k.h
++++ b/drivers/net/dsa/qca8k.h
+@@ -35,6 +35,9 @@
+ #define   QCA8K_MASK_CTRL_DEVICE_ID_MASK		GENMASK(15, 8)
+ #define   QCA8K_MASK_CTRL_DEVICE_ID(x)			((x) >> 8)
+ #define QCA8K_REG_PORT0_PAD_CTRL			0x004
++#define   QCA8K_PORT0_PAD_CTRL_MAC06_EXCHG		BIT(31)
++#define   QCA8K_PORT0_PAD_SGMII_RXCLK_FALLING_EDGE	BIT(19)
++#define   QCA8K_PORT0_PAD_SGMII_TXCLK_FALLING_EDGE	BIT(18)
+ #define QCA8K_REG_PORT5_PAD_CTRL			0x008
+ #define QCA8K_REG_PORT6_PAD_CTRL			0x00c
+ #define   QCA8K_PORT_PAD_RGMII_EN			BIT(26)

@@ -1,0 +1,27 @@
+From 4e8164a12d9fb6939a7838b3718b1d3ff28415f4 Mon Sep 17 00:00:00 2001
+From: Ansuel Smith <ansuelsmth@gmail.com>
+Date: Sun, 19 Sep 2021 14:18:05 +0200
+Subject: [PATCH 2/2] Documentation: devicetree: net: dsa: qca8k: document open
+ drain binding
+
+Document new binding qca,power_on_sel used to enable Power-on-strapping
+select reg and qca,led_open_drain to set led to open drain mode.
+
+Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
+---
+ Documentation/devicetree/bindings/net/dsa/qca8k.txt | 4 ++
+ 1 file changed, 4 insertions(+)
+
+--- a/Documentation/devicetree/bindings/net/dsa/qca8k.txt
++++ b/Documentation/devicetree/bindings/net/dsa/qca8k.txt
+@@ -13,6 +13,10 @@ Required properties:
+ Optional properties:
+ 
+ - reset-gpios: GPIO to be used to reset the whole device
++- qca,package48: Set to 48-pin mode required in some QCA8327 switches.
++- qca,power-on-sel: Enable Power-on-strapping select required in some QCA8327
++  switches.
++- qca,led-open-drain: Set leds to open-drain mode.
+ - qca,mac6-exchange: Internally swap MAC0 and MAC6.
+ - qca,sgmii-rxclk-falling-edge: Set the receive clock phase to falling edge.
+ - qca,sgmii-txclk-falling-edge: Set the transmit clock phase to falling edge.

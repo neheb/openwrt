@@ -1,0 +1,48 @@
+From 77382aa3f0af86d4037bc331e49c4ebb1bc813d8 Mon Sep 17 00:00:00 2001
+From: Ansuel Smith <ansuelsmth@gmail.com>
+Date: Mon, 13 Sep 2021 13:07:21 +0200
+Subject: [PATCH 1/2] net: dsa: qca8k: add explicit SGMII PLL enable
+
+Support enabling PLL on the SGMII CPU port. Some device require this
+special configuration or no traffic is transmitted and the switch
+doesn't work at all. A dedicated binding is added to the CPU node
+port to apply the correct reg on mac config.
+
+Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
+---
+ drivers/net/dsa/qca8k.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+--- a/drivers/net/dsa/qca8k.c
++++ b/drivers/net/dsa/qca8k.c
+@@ -1199,6 +1199,7 @@ qca8k_phylink_mac_config(struct dsa_swit
+ 			 const struct phylink_link_state *state)
+ {
+ 	struct qca8k_priv *priv = ds->priv;
++	struct dsa_port *dp;
+ 	u32 reg, val;
+ 	int ret;
+ 
+@@ -1267,6 +1268,8 @@ qca8k_phylink_mac_config(struct dsa_swit
+ 		break;
+ 	case PHY_INTERFACE_MODE_SGMII:
+ 	case PHY_INTERFACE_MODE_1000BASEX:
++		dp = dsa_to_port(ds, port);
++
+ 		/* Enable SGMII on the port */
+ 		qca8k_write(priv, reg, QCA8K_PORT_PAD_SGMII_EN);
+ 
+@@ -1285,8 +1288,11 @@ qca8k_phylink_mac_config(struct dsa_swit
+ 		if (ret)
+ 			return;
+ 
+-		val |= QCA8K_SGMII_EN_PLL | QCA8K_SGMII_EN_RX |
+-			QCA8K_SGMII_EN_TX | QCA8K_SGMII_EN_SD;
++		val |= QCA8K_SGMII_EN_SD;
++
++		if (of_property_read_bool(dp->dn, "qca,sgmii-enable-pll"))
++			val |= QCA8K_SGMII_EN_PLL | QCA8K_SGMII_EN_RX |
++			       QCA8K_SGMII_EN_TX;
+ 
+ 		if (dsa_is_cpu_port(ds, port)) {
+ 			/* CPU port, we're talking to the CPU MAC, be a PHY */

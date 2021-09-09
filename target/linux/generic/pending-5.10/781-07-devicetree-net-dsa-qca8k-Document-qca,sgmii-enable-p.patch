@@ -1,0 +1,25 @@
+From c3d448524f5d4a8145a056b97319550cbd96dac6 Mon Sep 17 00:00:00 2001
+From: Ansuel Smith <ansuelsmth@gmail.com>
+Date: Mon, 13 Sep 2021 13:12:46 +0200
+Subject: [PATCH 2/2] devicetree: net: dsa: qca8k: Document
+ qca,sgmii-enable-pll
+
+Document qca,sgmii-enable-pll binding used in the CPU nodes to
+enable SGMII PLL on MAC config.
+
+Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
+---
+ Documentation/devicetree/bindings/net/dsa/qca8k.txt | 2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/Documentation/devicetree/bindings/net/dsa/qca8k.txt
++++ b/Documentation/devicetree/bindings/net/dsa/qca8k.txt
+@@ -42,6 +42,8 @@ A CPU port node has the following option
+                           managed entity. See
+                           Documentation/devicetree/bindings/net/fixed-link.txt
+                           for details.
++- qca,sgmii-enable-pll  : For SGMII CPU port, explicitly enable PLL, TX and RX
++                          chain along with Signal Detection.
+ 
+ For QCA8K the 'fixed-link' sub-node supports only the following properties:
+ 

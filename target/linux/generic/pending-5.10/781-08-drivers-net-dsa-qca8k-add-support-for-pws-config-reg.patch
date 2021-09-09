@@ -1,0 +1,72 @@
+From 151641fdfe024485d858e254f52bd167b58f4c8c Mon Sep 17 00:00:00 2001
+From: Ansuel Smith <ansuelsmth@gmail.com>
+Date: Sun, 19 Sep 2021 14:13:54 +0200
+Subject: [PATCH 1/2] drivers: net: dsa: qca8k: add support for pws config reg
+
+Some qca8327 switch require the power_on_sel enabled for the pws_reg or
+sets the led to open drain.
+Also qca8327 switch have a special mode to declare reduced 48pin layout.
+This special mode is only present in qca8327 as qca8337 have a different
+pws_reg table.
+Introduce a new binding and support these special configuration.
+
+Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
+---
+ drivers/net/dsa/qca8k.c | 24 ++++++++++++++++++++++++
+ drivers/net/dsa/qca8k.h |  2 ++
+ 2 files changed, 26 insertions(+)
+
+--- a/drivers/net/dsa/qca8k.c
++++ b/drivers/net/dsa/qca8k.c
+@@ -1000,6 +1000,28 @@ qca8k_setup_port0_pad_ctrl_reg(struct qc
+ }
+ 
+ static int
++qca8k_setup_of_pws_reg(struct qca8k_priv *priv)
++{
++	struct device_node *node = priv->dev->of_node;
++	u32 val = 0;
++
++	if (priv->switch_id == QCA8K_ID_QCA8327)
++		if (of_property_read_bool(node, "qca,package48"))
++			val |= QCA8327_PWS_PACKAGE48_EN;
++
++	if (of_property_read_bool(node, "qca,power-on-sel"))
++		val |= QCA8K_PWS_POWER_ON_SEL;
++
++	if (of_property_read_bool(node, "qca,led-open-drain"))
++		/* POWER_ON_SEL needs to be set when configuring led to open drain */
++		val |= QCA8K_PWS_LED_OPEN_EN_CSR | QCA8K_PWS_POWER_ON_SEL;
++
++	return qca8k_rmw(priv, QCA8K_REG_PWS,
++			QCA8K_PWS_LED_OPEN_EN_CSR | QCA8K_PWS_POWER_ON_SEL,
++			val);
++}
++
++static int
+ qca8k_setup(struct dsa_switch *ds)
+ {
+ 	struct qca8k_priv *priv = (struct qca8k_priv *)ds->priv;
+@@ -1024,6 +1046,10 @@ qca8k_setup(struct dsa_switch *ds)
+ 	if (ret)
+ 		return ret;
+ 
++	ret = qca8k_setup_of_pws_reg(priv);
++	if (ret)
++		return ret;
++
+ 	ret = qca8k_setup_of_rgmii_delay(priv);
+ 	if (ret)
+ 		return ret;
+--- a/drivers/net/dsa/qca8k.h
++++ b/drivers/net/dsa/qca8k.h
+@@ -48,6 +48,9 @@
+ #define   QCA8K_MAX_DELAY				3
+ #define   QCA8K_PORT_PAD_SGMII_EN			BIT(7)
+ #define QCA8K_REG_PWS					0x010
++#define   QCA8K_PWS_POWER_ON_SEL			BIT(31)
++#define   QCA8327_PWS_PACKAGE48_EN			BIT(30)
++#define   QCA8K_PWS_LED_OPEN_EN_CSR			BIT(24)
+ #define   QCA8K_PWS_SERDES_AEN_DIS			BIT(7)
+ #define QCA8K_REG_MODULE_EN				0x030
+ #define   QCA8K_MODULE_EN_MIB				BIT(0)
