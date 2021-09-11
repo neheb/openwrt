@@ -14,7 +14,7 @@ Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
 
 --- a/drivers/net/dsa/qca8k.c
 +++ b/drivers/net/dsa/qca8k.c
-@@ -892,7 +892,20 @@ qca8k_setup_of_rgmii_delay(struct qca8k_
+@@ -906,7 +906,20 @@ qca8k_setup_of_rgmii_delay(struct qca8k_
  	if (mode != PHY_INTERFACE_MODE_RGMII_ID &&
  	    mode != PHY_INTERFACE_MODE_RGMII_RXID &&
  	    mode != PHY_INTERFACE_MODE_RGMII_TXID) {

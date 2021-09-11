@@ -15,7 +15,7 @@ Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
 
 --- a/drivers/net/dsa/qca8k.c
 +++ b/drivers/net/dsa/qca8k.c
-@@ -1199,6 +1199,7 @@ qca8k_phylink_mac_config(struct dsa_swit
+@@ -1213,6 +1213,7 @@ qca8k_phylink_mac_config(struct dsa_swit
  			 const struct phylink_link_state *state)
  {
  	struct qca8k_priv *priv = ds->priv;
@@ -23,7 +23,7 @@ Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
  	u32 reg, val;
  	int ret;
  
-@@ -1267,6 +1268,8 @@ qca8k_phylink_mac_config(struct dsa_swit
+@@ -1281,6 +1282,8 @@ qca8k_phylink_mac_config(struct dsa_swit
  		break;
  	case PHY_INTERFACE_MODE_SGMII:
  	case PHY_INTERFACE_MODE_1000BASEX:
@@ -32,7 +32,7 @@ Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
  		/* Enable SGMII on the port */
  		qca8k_write(priv, reg, QCA8K_PORT_PAD_SGMII_EN);
  
-@@ -1285,8 +1288,11 @@ qca8k_phylink_mac_config(struct dsa_swit
+@@ -1299,8 +1302,11 @@ qca8k_phylink_mac_config(struct dsa_swit
  		if (ret)
  			return;
  

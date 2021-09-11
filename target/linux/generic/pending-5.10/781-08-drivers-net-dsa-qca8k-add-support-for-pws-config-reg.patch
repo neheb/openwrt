@@ -18,7 +18,7 @@ Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
 
 --- a/drivers/net/dsa/qca8k.c
 +++ b/drivers/net/dsa/qca8k.c
-@@ -1000,6 +1000,28 @@ qca8k_setup_port0_pad_ctrl_reg(struct qc
+@@ -1014,6 +1014,28 @@ qca8k_setup_port0_pad_ctrl_reg(struct qc
  }
  
  static int
@@ -47,7 +47,7 @@ Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
  qca8k_setup(struct dsa_switch *ds)
  {
  	struct qca8k_priv *priv = (struct qca8k_priv *)ds->priv;
-@@ -1024,6 +1046,10 @@ qca8k_setup(struct dsa_switch *ds)
+@@ -1038,6 +1060,10 @@ qca8k_setup(struct dsa_switch *ds)
  	if (ret)
  		return ret;
  

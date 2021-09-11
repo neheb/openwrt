@@ -17,7 +17,7 @@ Signed-off-by: Matthew Hagan <mnhagan88@gmail.com>
 
 --- a/drivers/net/dsa/qca8k.c
 +++ b/drivers/net/dsa/qca8k.c
-@@ -959,6 +959,34 @@ qca8k_setup_mac_pwr_sel(struct qca8k_pri
+@@ -973,6 +973,34 @@ qca8k_setup_mac_pwr_sel(struct qca8k_pri
  }
  
  static int
@@ -52,7 +52,7 @@ Signed-off-by: Matthew Hagan <mnhagan88@gmail.com>
  qca8k_setup(struct dsa_switch *ds)
  {
  	struct qca8k_priv *priv = (struct qca8k_priv *)ds->priv;
-@@ -991,6 +1019,11 @@ qca8k_setup(struct dsa_switch *ds)
+@@ -1005,6 +1033,11 @@ qca8k_setup(struct dsa_switch *ds)
  	if (ret)
  		return ret;
  

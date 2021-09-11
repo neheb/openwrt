@@ -14,7 +14,7 @@ Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
 
 --- a/drivers/net/dsa/qca8k.c
 +++ b/drivers/net/dsa/qca8k.c
-@@ -937,6 +937,28 @@ qca8k_setup_of_rgmii_delay(struct qca8k_
+@@ -951,6 +951,28 @@ qca8k_setup_of_rgmii_delay(struct qca8k_
  }
  
  static int
@@ -43,7 +43,7 @@ Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
  qca8k_setup(struct dsa_switch *ds)
  {
  	struct qca8k_priv *priv = (struct qca8k_priv *)ds->priv;
-@@ -965,6 +987,10 @@ qca8k_setup(struct dsa_switch *ds)
+@@ -979,6 +1001,10 @@ qca8k_setup(struct dsa_switch *ds)
  	if (ret)
  		return ret;
  
