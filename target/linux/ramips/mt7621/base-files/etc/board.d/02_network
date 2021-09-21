@@ -149,6 +149,11 @@ ramips_setup_macs()
 		wan_mac=$lan_mac
 		label_mac=$lan_mac
 		;;
+	linksys,e7350)
+		lan_mac=$(mtd_get_mac_ascii u_env lan_hwaddr)
+		wan_mac=$(mtd_get_mac_ascii u_env wan_hwaddr)
+		label_mac=$lan_mac
+		;;
 	mikrotik,routerboard-750gr3|\
 	mikrotik,routerboard-760igs|\
 	mikrotik,routerboard-m11g|\
