@@ -26,6 +26,10 @@ define Build/gemtek-trailer
 	printf "%s%08X" ".GEMTEK." "$$(cksum $@ | cut -d ' ' -f1)" >> $@
 endef
 
+define Build/golf-trailer
+	printf "%s%08X" "GOLF" "$$(cksum $@ | cut -d ' ' -f1)" >> $@
+endef
+
 define Build/iodata-factory
 	$(eval fw_size=$(word 1,$(1)))
 	$(eval fw_type=$(word 2,$(1)))
@@ -825,6 +829,24 @@ define Device/linksys_e5600
 	append-ubi | check-size | gemtek-trailer
 endef
 TARGET_DEVICES += linksys_e5600
+
+define Device/linksys_e7350
+  $(Device/dsa-migration)
+  $(Device/uimage-lzma-loader)
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  KERNEL_SIZE := 4096k
+  IMAGE_SIZE := 26624k
+  DEVICE_VENDOR := Linksys
+  DEVICE_MODEL := E7350
+  DEVICE_PACKAGES := kmod-mt7915e kmod-usb3 uboot-envtools
+  UBINIZE_OPTS := -E 5
+  IMAGES += factory.bin
+  IMAGE/sysupgrade.bin := sysupgrade-tar | check-size | append-metadata
+  IMAGE/factory.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) | \
+	append-ubi | check-size | golf-trailer
+endef
+TARGET_DEVICES += linksys_e7350
 
 define Device/linksys_ea7xxx
   $(Device/dsa-migration)

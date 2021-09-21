@@ -16,6 +16,7 @@ boot() {
 	linksys,ea8100-v2)
 		mtd resetbc s_env || true
 		;;
+	linksys,e7350|\
 	samknows,whitebox-v8)
 		fw_setenv bootcount 0
 		;;
