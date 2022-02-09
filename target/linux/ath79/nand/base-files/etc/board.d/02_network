@@ -11,20 +11,6 @@ ath79_setup_interfaces()
 	glinet,gl-e750)
 		ucidef_set_interface_lan "eth0"
 		;;
-	domywifi,dw33d)
-		ucidef_add_switch "switch0" \
-			"0@eth0" "1:wan" "2:lan" "3:lan" "4:lan" "5:lan" "6@eth1"
-		;;
-	dongwon,dw02-412h-64m|\
-	dongwon,dw02-412h-128m)
-		ucidef_add_switch "switch0" \
-			"0@eth0" "2:lan:4" "3:lan:3" "4:lan:2" "5:lan:1" "1:wan"
-		;;
-	glinet,gl-ar750s-nor|\
-	glinet,gl-ar750s-nor-nand)
-		ucidef_add_switch "switch0" \
-			"0@eth0" "2:lan:2" "3:lan:1" "1:wan"
-		;;
 	netgear,r6100)
 		ucidef_set_interface_wan "eth1"
 		ucidef_add_switch "switch0" \
@@ -33,8 +19,6 @@ ath79_setup_interfaces()
 	netgear,wndr3700-v4|\
 	netgear,wndr4300|\
 	netgear,wndr4300sw|\
-	netgear,wndr4300-v2|\
-	netgear,wndr4500-v3)
 		ucidef_add_switch "switch0" \
 			"0@eth0" "1:lan:4" "2:lan:3" "3:lan:2" "4:lan:1" "5:wan"
 		;;
@@ -42,13 +26,19 @@ ath79_setup_interfaces()
 		ucidef_add_switch "switch0" \
 			"0@eth0" "1:lan:4" "2:lan:3" "3:lan:2" "4:lan:1"
 		;;
-	zte,mf286)
-		ucidef_add_switch "switch0" \
-			"0@eth0" "1:lan:4" "2:lan:3" "3:lan:2" "5:lan:1"
-		;;
+	dongwon,dw02-412h-64m|\
+	dongwon,dw02-412h-128m|\
+	netgear,wndr4300-v2|\
+	netgear,wndr4500-v3|\
 	zyxel,nbg6716)
-		ucidef_add_switch "switch0" \
-			"0@eth0" "1:lan" "2:lan" "3:lan" "4:lan" "5:wan" "6@eth1"
+		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" "wan"
+		;;
+	zte,mf286)
+		ucidef_set_interfaces_lan "lan1 lan2 lan3 lan4"
+		;;
+	glinet,gl-ar750s-nor|\
+	glinet,gl-ar750s-nor-nand)
+		ucidef_set_interfaces_lan_wan "lan1 lan2" "wan"
 		;;
 	*)
 		ucidef_set_interfaces_lan_wan "eth0" "eth1"
