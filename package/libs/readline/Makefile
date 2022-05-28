@@ -45,6 +45,7 @@ define Package/libreadline/description
 	history expansion on previous commands.
 endef
 
+HOST_CONFIGURE_ARGS += --disable-shared --with-pic
 CONFIGURE_ARGS += --with-curses --disable-install-examples
 
 CONFIGURE_VARS += \
@@ -52,6 +53,7 @@ CONFIGURE_VARS += \
 	bash_cv_func_sigsetjmp=yes \
 
 TARGET_CFLAGS += $(FPIC)
+HOST_CFLAGS += $(FPIC)
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include

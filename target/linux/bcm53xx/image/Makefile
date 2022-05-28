@@ -167,6 +167,15 @@ define Device/asus_rt-ac87u
 endef
 TARGET_DEVICES += asus_rt-ac87u
 
+define Device/asus_rt-ac88u
+  $(call Device/asus)
+  DEVICE_MODEL := RT-AC88U
+  DEVICE_PACKAGES := $(BRCMFMAC_4366C0) $(USB3_PACKAGES)
+  ASUS_PRODUCTID := RT-AC88U
+  BROKEN := y
+endef
+TARGET_DEVICES += asus_rt-ac88u
+
 define Device/asus_rt-n18u
   $(call Device/asus)
   DEVICE_MODEL := RT-N18U
@@ -242,13 +251,11 @@ define Device/dlink_dir-885l
 endef
 TARGET_DEVICES += dlink_dir-885l
 
-# Linksys devices are disabled due to problem with 2 TRX partitions
 define Device/linksys_ea6300-v1
   DEVICE_VENDOR := Linksys
   DEVICE_MODEL := EA6300
   DEVICE_VARIANT := v1
   DEVICE_PACKAGES := $(B43) $(USB3_PACKAGES)
-  BROKEN := y
 endef
 TARGET_DEVICES += linksys_ea6300-v1
 
@@ -265,7 +272,6 @@ define Device/linksys_ea9200
   DEVICE_MODEL := EA9200
   DEVICE_VARIANT := v1
   DEVICE_PACKAGES := $(BRCMFMAC_43602A1) $(USB3_PACKAGES)
-  BROKEN := y
 endef
 TARGET_DEVICES += linksys_ea9200
 
@@ -320,7 +326,7 @@ TARGET_DEVICES += luxul_xwr-3150
 define Device/meraki_mr32
   DEVICE_VENDOR := Meraki
   DEVICE_MODEL := MR32
-  DEVICE_PACKAGES := $(B43) kmod-i2c-bcm-iproc kmod-i2c-gpio kmod-eeprom-at24 \
+  DEVICE_PACKAGES := $(B43) kmod-i2c-bcm-iproc kmod-eeprom-at24 \
 	kmod-leds-pwm kmod-hwmon-ina2xx kmod-bluetooth
   DEVICE_DTS := bcm53016-meraki-mr32
 # Meraki FW r23 tries to resize the part.safe partition before it will
