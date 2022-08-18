@@ -75,12 +75,10 @@ case "$board" in
 		[ "$PHYNBR" = "0" ] && macaddr_add $hw_mac_addr 1 > /sys${DEVPATH}/macaddress
 		[ "$PHYNBR" = "1" ] && macaddr_add $hw_mac_addr 2 > /sys${DEVPATH}/macaddress
 		;;
-<<<<<<< HEAD
 	linksys,e7350)
 		hw_mac_addr=$(mtd_get_mac_ascii u_env wan_hwaddr)
 		[ "$PHYNBR" = "0" ] && macaddr_add $hw_mac_addr 1 > /sys${DEVPATH}/macaddress
 		[ "$PHYNBR" = "1" ] && macaddr_add $hw_mac_addr 2 > /sys${DEVPATH}/macaddress
-=======
 	oraybox,x3a)
 		if [ "$PHYNBR" = "1" ]; then
 			hw_mac_addr="$(mtd_get_mac_binary factory 0x4)"
@@ -99,6 +97,5 @@ case "$board" in
 	yuncore,ax820)
 		[ "$PHYNBR" = "1" ] && \
 			macaddr_setbit_la "$(mtd_get_mac_binary Factory 0xe000)" > /sys${DEVPATH}/macaddress
->>>>>>> origin/master
 		;;
 esac
