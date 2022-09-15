@@ -1047,7 +1047,7 @@ get_freq() {
 	iw "$phy" info | awk -v band="$band" -v channel="[$channel]" '
 
 $1 ~ /Band/ {
-	band_match = band == $2
+	band_match = band = $2
 }
 
 band_match && $3 == "MHz" && $4 == channel {
