@@ -644,7 +644,7 @@ find_phy() {
 		}
 	}
 	[ -n "$macaddr" ] && {
-		for phy in $(ls /sys/class/ieee80211 2>/dev/null); do
+		for phy in /sys/class/ieee80211/*; do
 			grep -i -q "$macaddr" "/sys/class/ieee80211/${phy}/macaddress" && {
 				path="$(iwinfo nl80211 path "$phy")"
 				rename_board_phy_by_path "$path"
