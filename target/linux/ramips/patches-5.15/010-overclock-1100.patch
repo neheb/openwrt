@@ -1,0 +1,15 @@
+diff --git a/drivers/clk/ralink/clk-mt7621.c b/drivers/clk/ralink/clk-mt7621.c
+index 99256659dd96..2be373a2d3da 100644
+--- a/drivers/clk/ralink/clk-mt7621.c
++++ b/drivers/clk/ralink/clk-mt7621.c
+@@ -269,6 +269,10 @@ static unsigned long mt7621_cpu_recalc_rate(struct clk_hw *hw,
+ 		break;
+ 	case 1:
+ 		regmap_read(memc, MEMC_REG_CPU_PLL, &pll);
++		pll &= ~(0x7ff);
++		pll |= (0x362);
++		regmap_write(memc, MEMC_REG_CPU_PLL, pll);
++		for(int i = 0; i < 1024; i++);
+ 		fbdiv = FIELD_GET(CPU_PLL_FBDIV_MASK, pll);
+ 		prediv = FIELD_GET(CPU_PLL_PREDIV_MASK, pll);
+ 		cpu_clk = ((fbdiv + 1) * xtal_clk) >> prediv_tbl[prediv];
