@@ -3,6 +3,7 @@ log_urandom_seed() {
 }
 
 _do_urandom_seed() {
+    [ "$(fw_getenv rngseed 2> /dev/null)" ] && { log_urandom_seed "Already seeded at boot."; return; }
     [ -f "$1" ] || { log_urandom_seed "Seed file not found ($1)"; return; }
     [ -O "$1" -a -G "$1" -a ! -x "$1" ] || { log_urandom_seed "Wrong owner / permissions for $1"; return; }
 
