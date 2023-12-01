@@ -152,13 +152,8 @@ endif
 
 # Disable noisy checks by default as in upstream
 DTC_WARN_FLAGS := \
-  -Wno-interrupt_provider \
-  -Wno-unique_unit_address \
-  -Wno-unit_address_vs_reg \
-  -Wno-avoid_unnecessary_addr_size \
-  -Wno-alias_paths \
-  -Wno-graph_child_address \
-  -Wno-simple_bus_reg
+  -Wunique_unit_address_if_enabled \
+  -Wdeprecated_gpio_property
 
 DTC_FLAGS += $(DTC_WARN_FLAGS)
 DTCO_FLAGS += $(DTC_WARN_FLAGS)
