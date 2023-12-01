@@ -434,16 +434,12 @@ def parse_LEDS_NORMAL_config(reg, val):
         if f"phy0 pattern_en {pattern_en}" in ts or (
             pattern_en == "off" and phy == "phy0123"
         ):
-            strings.append(
-                f"port0 led {led_num} is set to mode {pattern_en}"
-            )
+            strings.append(f"port0 led {led_num} is set to mode {pattern_en}")
 
         if f"phy4 pattern_en {pattern_en}" in ts or (
             pattern_en == "off" and phy == "phy4"
         ):
-            strings.append(
-                f"port4 led {led_num} is set to mode {pattern_en}"
-            )
+            strings.append(f"port4 led {led_num} is set to mode {pattern_en}")
 
         print(", ".join(strings))
 
