@@ -92,7 +92,7 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 
-			uboot: partition@0 {
+			partition@0 {
 				label = "u-boot";
 				reg = <0x000000 0x040000>;
 				read-only;
@@ -125,6 +125,10 @@
 						reg = <0x0 0x6>;
 						#nvmem-cell-cells = <1>;
 					};
+
+					cal_art_5000: calibration@5000 {
+						reg = <0x5000 0x440>;
+					};
 				};
 			};
 		};
@@ -139,7 +143,6 @@
 		reg = <0x0000 0 0 0 0>;
 		nvmem-cells = <&macaddr_art_0 (-2)>;
 		nvmem-cell-names = "mac-address";
-		mtd-cal-data = <&art 0x5000>;
 		qca,no-eeprom;
 		ieee80211-freq-limit = <2402000 2482000>;
 		#gpio-cells = <2>;
@@ -150,10 +153,10 @@
 &wmac {
 	status = "okay";
 
+	nvmem-cells = <&macaddr_art_0 (-1)>, <&cal_art_5000>;
+	nvmem-cell-names = "mac-address", "calibration";
+
 	ieee80211-freq-limit = <4900000 5990000>;
-	mtd-cal-data = <&art 0x1000>;
-	nvmem-cells = <&macaddr_art_0 (-1)>;
-	nvmem-cell-names = "mac-address";
 };
 
 &mdio0 {
