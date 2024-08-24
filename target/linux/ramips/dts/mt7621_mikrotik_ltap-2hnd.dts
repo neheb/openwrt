@@ -118,6 +118,16 @@
 	};
 };
 
+&hconfig {
+	nvmem-layout {
+		compatible = "mikrotik,routerboot-nvmem";
+
+		macaddr_hard: base-mac-address {
+			#nvmem-cell-cells = <1>;
+		};
+	};
+};
+
 &partitions {
 	partition@40000 {
 		compatible = "mikrotik,minor";
