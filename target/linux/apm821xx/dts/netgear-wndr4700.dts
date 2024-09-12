@@ -190,7 +190,7 @@
 
 				partition@40000 {
 					label = "u-boot-env-main";
-					reg = <0x00040000 0x20000>; /* one block is 128k */
+					reg = <0x40000 0x20000>; /* one block is 128k */
 					read-only;
 
 					nvmem-layout {
@@ -563,28 +563,34 @@
 	 *
 	 */
 
-	bridge@64,0 {
+	pcie@0,0 {
+		device_type = "pci";
 		reg = <0x00400000 0 0 0 0>;
 		#address-cells = <3>;
 		#size-cells = <2>;
+		bus-range = <0x41 0x7f>;
 		ranges;
 
-		bridge@65,0 {
+		pcie@0,0 {
 			/* IDT PES4T4 PCI Express Switch */
 			compatible = "pci111d,803a";
 			reg = <0x00410000 0 0 0 0>;
+			device_type = "pci";
 			#address-cells = <3>;
 			#size-cells = <2>;
+			bus-range = <0x42 0x7f>;
 			ranges;
 
-			bridge@66,2 {
+			pcie@2,0 {
 				compatible = "pci111d,803a";
 				reg = <0x00421000 0 0 0 0>;
+				device_type = "pci";
 				#address-cells = <3>;
 				#size-cells = <2>;
+				bus-range = <0x43 0x43>;
 				ranges;
 
-				wifi0: wifi@67,0 {
+				wifi0: wifi@0,0 {
 					/* Atheros AR9380 5GHz */
 					compatible = "pci168c,0030";
 					reg = <0x00430000 0 0 0 0>;
@@ -600,14 +606,16 @@
 				};
 			};
 
-			bridge@66,3 {
+			pcie@3,0 {
 				compatible = "pci111d,803a";
 				reg = <0x00421800 0 0 0 0>;
+				device_type = "pci";
 				#address-cells = <3>;
 				#size-cells = <2>;
+				bus-range = <0x44 0x44>;
 				ranges;
 
-				wifi1: wifi@68,0 {
+				wifi1: wifi@0,0 {
 					/* Atheros AR9381 2.4GHz */
 					compatible = "pci168c,0033";
 					reg = <0x00440000 0 0 0 0>;
@@ -617,14 +625,16 @@
 				};
 			};
 
-			bridge@66,4 {
+			pcie@4,0 {
 				compatible = "pci111d,803a";
 				reg = <0x00422000 0 0 0 0>;
+				device_type = "pci";
 				#address-cells = <3>;
 				#size-cells = <2>;
+				bus-range = <0x45 0x45>;
 				ranges;
 
-				usb1: usb@69,0 {
+				usb1: usb@0,0 {
 					/* Renesas uPD720202 */
 					compatible = "pci1912,0015";
 					reg = <0x00450000 0 0 0 0>;

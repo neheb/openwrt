@@ -41,7 +41,7 @@
 		};
 	};
 
-	memory {
+	memory@0 {
 		device_type = "memory";
 		reg = <0x00000000 0x00000000 0x00000000>; /* Filled in by U-Boot */
 	};
@@ -206,14 +206,14 @@
 					  "rx0coal", "rx1coal";
 		};
 
-		POB0: opb {
+		POB0: opb@b {
 			compatible = "ibm,opb-460ex", "ibm,opb";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges = <0xb0000000 0x00000004 0xb0000000 0x50000000>;
 			clock-frequency = <0>; /* Filled in by U-Boot */
 
-			EBC0: ebc {
+			EBC0: ebc@12 {
 				compatible = "ibm,ebc-460ex", "ibm,ebc";
 				dcr-reg = <0x012 0x002>;
 				#address-cells = <2>;
