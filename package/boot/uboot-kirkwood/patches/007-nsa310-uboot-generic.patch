@@ -25,24 +25,24 @@ NOTE: this patch is ready for upstream, LEDE-specific parts are in
 
 --- a/arch/arm/mach-kirkwood/Kconfig
 +++ b/arch/arm/mach-kirkwood/Kconfig
-@@ -53,6 +53,9 @@ config TARGET_GOFLEXHOME
- config TARGET_NAS220
- 	bool "BlackArmor NAS220"
+@@ -129,6 +129,9 @@ config TARGET_NAS220
+ 	select FEROCEON_88FR131
+ 	select KW88F6192
  
 +config TARGET_NSA310
 +	bool "Zyxel NSA310 Board"
 +
  config TARGET_NSA310S
  	bool "Zyxel NSA310S"
- 
-@@ -86,6 +89,7 @@ source "board/raidsonic/ib62x0/Kconfig"
+ 	select FEROCEON_88FR131
+@@ -184,6 +187,7 @@ source "board/raidsonic/ib62x0/Kconfig"
  source "board/Seagate/dockstar/Kconfig"
  source "board/Seagate/goflexhome/Kconfig"
  source "board/Seagate/nas220/Kconfig"
 +source "board/zyxel/nsa310/Kconfig"
  source "board/zyxel/nsa310s/Kconfig"
+ source "board/zyxel/nsa325/Kconfig"
  source "board/alliedtelesis/SBx81LIFKW/Kconfig"
- source "board/alliedtelesis/SBx81LIFXCAT/Kconfig"
 --- /dev/null
 +++ b/board/zyxel/nsa310/Kconfig
 @@ -0,0 +1,12 @@

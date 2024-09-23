@@ -18,7 +18,7 @@ Signed-off-by: Pawel Dembicki <paweldembicki@gmail.com>
 
 --- a/drivers/net/phy/mv88e61xx.c
 +++ b/drivers/net/phy/mv88e61xx.c
-@@ -180,6 +180,7 @@
+@@ -175,6 +175,7 @@
  #define PORT_SWITCH_ID_6071		0x0710
  #define PORT_SWITCH_ID_6096		0x0980
  #define PORT_SWITCH_ID_6097		0x0990
@@ -26,7 +26,7 @@ Signed-off-by: Pawel Dembicki <paweldembicki@gmail.com>
  #define PORT_SWITCH_ID_6172		0x1720
  #define PORT_SWITCH_ID_6176		0x1760
  #define PORT_SWITCH_ID_6220		0x2200
-@@ -997,6 +998,7 @@ static int mv88e61xx_probe(struct phy_de
+@@ -992,6 +993,7 @@ static int mv88e61xx_probe(struct phy_de
  	switch (priv->id) {
  	case PORT_SWITCH_ID_6096:
  	case PORT_SWITCH_ID_6097:
@@ -34,29 +34,3 @@ Signed-off-by: Pawel Dembicki <paweldembicki@gmail.com>
  	case PORT_SWITCH_ID_6172:
  	case PORT_SWITCH_ID_6176:
  	case PORT_SWITCH_ID_6240:
-@@ -1152,6 +1154,17 @@ static struct phy_driver mv88e61xx_drive
- 	.shutdown = &genphy_shutdown,
- };
- 
-+static struct phy_driver mv88e617x_driver = {
-+	.name = "Marvell MV88E617x",
-+	.uid = 0x01410e70,
-+	.mask = 0xfffffff0,
-+	.features = PHY_GBIT_FEATURES,
-+	.probe = mv88e61xx_probe,
-+	.config = mv88e61xx_phy_config,
-+	.startup = mv88e61xx_phy_startup,
-+	.shutdown = &genphy_shutdown,
-+};
-+
- static struct phy_driver mv88e609x_driver = {
- 	.name = "Marvell MV88E609x",
- 	.uid = 0x1410c89,
-@@ -1177,6 +1190,7 @@ static struct phy_driver mv88e6071_drive
- int phy_mv88e61xx_init(void)
- {
- 	phy_register(&mv88e61xx_driver);
-+	phy_register(&mv88e617x_driver);
- 	phy_register(&mv88e609x_driver);
- 	phy_register(&mv88e6071_driver);
- 
