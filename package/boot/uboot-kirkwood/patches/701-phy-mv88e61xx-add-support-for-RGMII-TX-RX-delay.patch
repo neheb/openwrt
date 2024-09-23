@@ -19,7 +19,7 @@ Signed-off-by: Pawel Dembicki <paweldembicki@gmail.com>
 
 --- a/drivers/net/phy/mv88e61xx.c
 +++ b/drivers/net/phy/mv88e61xx.c
-@@ -94,6 +94,8 @@
+@@ -97,6 +97,8 @@
  #define PORT_REG_STATUS_CMODE_1000BASE_X	0x9
  #define PORT_REG_STATUS_CMODE_SGMII		0xa
  
@@ -28,7 +28,7 @@ Signed-off-by: Pawel Dembicki <paweldembicki@gmail.com>
  #define PORT_REG_PHYS_CTRL_PCS_AN_EN	BIT(10)
  #define PORT_REG_PHYS_CTRL_PCS_AN_RST	BIT(9)
  #define PORT_REG_PHYS_CTRL_FC_VALUE	BIT(7)
-@@ -747,9 +749,16 @@ static int mv88e61xx_fixed_port_setup(st
+@@ -742,9 +744,16 @@ static int mv88e61xx_fixed_port_setup(st
  		       PORT_REG_PHYS_CTRL_SPD1000;
  	}
  

@@ -1,23 +1,23 @@
 --- a/arch/arm/mach-kirkwood/Kconfig
 +++ b/arch/arm/mach-kirkwood/Kconfig
-@@ -28,6 +28,9 @@ config TARGET_POGO_E02
- config TARGET_POGOPLUGV4
-     bool "Pogoplug V4 Board"
+@@ -81,6 +81,9 @@ config TARGET_POGO_V4
+ 	select KW88F6192
+ 	select KIRKWOOD_COMMON
  
 +config TARGET_DNS320L
 +	bool "dns320l Board"
 +
  config TARGET_DNS325
  	bool "dns325 Board"
- 
-@@ -93,6 +96,7 @@ source "board/Marvell/sheevaplug/Kconfig
+ 	select FEROCEON_88FR131
+@@ -185,6 +188,7 @@ source "board/Marvell/sheevaplug/Kconfig
  source "board/buffalo/lsxl/Kconfig"
  source "board/cloudengines/pogo_e02/Kconfig"
- source "board/cloudengines/pogoplugv4/Kconfig"
+ source "board/cloudengines/pogo_v4/Kconfig"
 +source "board/d-link/dns320l/Kconfig"
  source "board/d-link/dns325/Kconfig"
  source "board/iomega/iconnect/Kconfig"
- source "board/keymile/Kconfig"
+ source "board/LaCie/net2big_v2/Kconfig"
 --- /dev/null
 +++ b/board/d-link/dns320l/dns320l.c
 @@ -0,0 +1,113 @@
@@ -264,7 +264,7 @@
 +obj-y	:= dns320l.o
 --- /dev/null
 +++ b/configs/dns320l_defconfig
-@@ -0,0 +1,48 @@
+@@ -0,0 +1,52 @@
 +CONFIG_ARM=y
 +CONFIG_SYS_DCACHE_OFF=y
 +CONFIG_ARCH_CPU_INIT=y
@@ -313,6 +313,10 @@
 +CONFIG_LZO=y
 +CONFIG_OF_LIBFDT=y
 +CONFIG_NET_RANDOM_ETHADDR=y
++CONFIG_SYS_LOAD_ADDR=0x800000
++# CONFIG_SPL_USE_ARCH_MEMCPY is not set
++# CONFIG_SPL_USE_ARCH_MEMSET is not set
++# CONFIG_ARM64_SUPPORT_AARCH32 is not set
 --- /dev/null
 +++ b/include/configs/dns320l.h
 @@ -0,0 +1,69 @@
