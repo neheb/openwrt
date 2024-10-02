@@ -127,3 +127,7 @@
 &phy1 {
 	reset-gpios = <&gpio 44 GPIO_ACTIVE_LOW>;
 };
+
+&wifi {
+	compatible = "pci168c,0030";
+};

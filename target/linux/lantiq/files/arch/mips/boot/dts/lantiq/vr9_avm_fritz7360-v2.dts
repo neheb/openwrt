@@ -94,6 +94,7 @@
 };
 
 &wifi {
+	compatible = "pci168c,002e";
 	/delete-property/ qca,no-eeprom;
 	nvmem-cells = <&cal_urlader_985>;
 	nvmem-cell-names = "calibration";
