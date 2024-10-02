@@ -157,7 +157,6 @@
 
 		wifi: wifi@0,0 {
 			reg = <0 0 0 0 0>;
-			qca,no-eeprom; /* load from ath9k-eeprom-pci-0000:01:00.0.bin */
 		};
 	};
 };
