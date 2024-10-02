@@ -130,4 +130,6 @@
 
 &wifi {
 	compatible = "pci168c,0030";
+
+	qca,no-eeprom; /* load from ath9k-eeprom-pci-0000:01:00.0.bin */
 };
