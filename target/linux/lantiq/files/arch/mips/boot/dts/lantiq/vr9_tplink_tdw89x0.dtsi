@@ -200,8 +200,7 @@
 		#address-cells = <3>;
 		device_type = "pci";
 
-		ath9k: wifi@168c,002e {
-			compatible = "pci168c,002e";
+		ath9k: wifi@0,0 {
 			reg = <0 0 0 0 0>;
 			#gpio-cells = <2>;
 			gpio-controller;
