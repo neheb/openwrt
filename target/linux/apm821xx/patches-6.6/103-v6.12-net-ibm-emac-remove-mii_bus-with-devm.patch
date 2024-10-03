@@ -1,0 +1,104 @@
+From 93a6d4e03629067590219189eae6feba218650e1 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Wed, 11 Sep 2024 19:48:58 -0700
+Subject: [PATCH] net: ibm: emac: remove mii_bus with devm
+
+Switching to devm management of mii_bus allows to remove
+mdiobus_unregister calls and thus avoids needing a mii_bus global struct
+member.
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Link: https://patch.msgid.link/20240912024903.6201-5-rosenp@gmail.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+---
+ drivers/net/ethernet/ibm/emac/core.c | 32 +++++++++++-----------------
+ drivers/net/ethernet/ibm/emac/core.h |  1 -
+ 2 files changed, 13 insertions(+), 20 deletions(-)
+
+--- a/drivers/net/ethernet/ibm/emac/core.c
++++ b/drivers/net/ethernet/ibm/emac/core.c
+@@ -2581,6 +2581,7 @@ static const struct mii_phy_ops emac_dt_
+ static int emac_dt_mdio_probe(struct emac_instance *dev)
+ {
+ 	struct device_node *mii_np;
++	struct mii_bus *bus;
+ 	int res;
+ 
+ 	mii_np = of_get_child_by_name(dev->ofdev->dev.of_node, "mdio");
+@@ -2594,23 +2595,23 @@ static int emac_dt_mdio_probe(struct ema
+ 		goto put_node;
+ 	}
+ 
+-	dev->mii_bus = devm_mdiobus_alloc(&dev->ofdev->dev);
+-	if (!dev->mii_bus) {
++	bus = devm_mdiobus_alloc(&dev->ofdev->dev);
++	if (!bus) {
+ 		res = -ENOMEM;
+ 		goto put_node;
+ 	}
+ 
+-	dev->mii_bus->priv = dev->ndev;
+-	dev->mii_bus->parent = dev->ndev->dev.parent;
+-	dev->mii_bus->name = "emac_mdio";
+-	dev->mii_bus->read = &emac_mii_bus_read;
+-	dev->mii_bus->write = &emac_mii_bus_write;
+-	dev->mii_bus->reset = &emac_mii_bus_reset;
+-	snprintf(dev->mii_bus->id, MII_BUS_ID_SIZE, "%s", dev->ofdev->name);
+-	res = of_mdiobus_register(dev->mii_bus, mii_np);
++	bus->priv = dev->ndev;
++	bus->parent = dev->ndev->dev.parent;
++	bus->name = "emac_mdio";
++	bus->read = &emac_mii_bus_read;
++	bus->write = &emac_mii_bus_write;
++	bus->reset = &emac_mii_bus_reset;
++	snprintf(bus->id, MII_BUS_ID_SIZE, "%s", dev->ofdev->name);
++	res = devm_of_mdiobus_register(&dev->ofdev->dev, bus, mii_np);
+ 	if (res) {
+ 		dev_err(&dev->ofdev->dev, "cannot register MDIO bus %s (%d)",
+-			dev->mii_bus->name, res);
++			bus->name, res);
+ 	}
+ 
+  put_node:
+@@ -2656,8 +2657,6 @@ static int emac_dt_phy_probe(struct emac
+ 		res = emac_dt_mdio_probe(dev);
+ 		if (!res) {
+ 			res = emac_dt_phy_connect(dev, phy_handle);
+-			if (res)
+-				mdiobus_unregister(dev->mii_bus);
+ 		}
+ 	}
+ 
+@@ -2697,10 +2696,8 @@ static int emac_init_phy(struct emac_ins
+ 
+ 			res = of_phy_register_fixed_link(np);
+ 			dev->phy_dev = of_phy_find_device(np);
+-			if (res || !dev->phy_dev) {
+-				mdiobus_unregister(dev->mii_bus);
++			if (res || !dev->phy_dev)
+ 				return res ? res : -EINVAL;
+-			}
+ 			emac_adjust_link(dev->ndev);
+ 			put_device(&dev->phy_dev->mdio.dev);
+ 		}
+@@ -3265,9 +3262,6 @@ static int emac_remove(struct platform_d
+ 	if (dev->phy_dev)
+ 		phy_disconnect(dev->phy_dev);
+ 
+-	if (dev->mii_bus)
+-		mdiobus_unregister(dev->mii_bus);
+-
+ 	busy_phy_map &= ~(1 << dev->phy.address);
+ 	DBG(dev, "busy_phy_map now %#x" NL, busy_phy_map);
+ 
+--- a/drivers/net/ethernet/ibm/emac/core.h
++++ b/drivers/net/ethernet/ibm/emac/core.h
+@@ -189,7 +189,6 @@ struct emac_instance {
+ 	struct mutex			mdio_lock;
+ 
+ 	/* Device-tree based phy configuration */
+-	struct mii_bus			*mii_bus;
+ 	struct phy_device		*phy_dev;
+ 
+ 	/* ZMII infos if any */

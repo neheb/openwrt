@@ -1,0 +1,57 @@
+From 969b002d7b65062ab16fc6b6a444602a56b1e628 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Wed, 11 Sep 2024 19:48:57 -0700
+Subject: [PATCH] net: ibm: emac: use devm for of_iomap
+
+Allows removing manual iounmap.
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Link: https://patch.msgid.link/20240912024903.6201-4-rosenp@gmail.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+---
+ drivers/net/ethernet/ibm/emac/core.c | 12 ++++--------
+ 1 file changed, 4 insertions(+), 8 deletions(-)
+
+--- a/drivers/net/ethernet/ibm/emac/core.c
++++ b/drivers/net/ethernet/ibm/emac/core.c
+@@ -3084,9 +3084,9 @@ static int emac_probe(struct platform_de
+ 
+ 	/* Map EMAC regs */
+ 	// TODO : platform_get_resource() and devm_ioremap_resource()
+-	dev->emacp = of_iomap(np, 0);
+-	if (dev->emacp == NULL) {
+-		printk(KERN_ERR "%pOF: Can't map device registers!\n", np);
++	dev->emacp = devm_of_iomap(&ofdev->dev, np, 0, NULL);
++	if (!dev->emacp) {
++		dev_err(&ofdev->dev, "can't map device registers");
+ 		err = -ENOMEM;
+ 		goto err_irq_unmap;
+ 	}
+@@ -3097,7 +3097,7 @@ static int emac_probe(struct platform_de
+ 		printk(KERN_ERR
+ 		       "%pOF: Timeout waiting for dependent devices\n", np);
+ 		/*  display more info about what's missing ? */
+-		goto err_reg_unmap;
++		goto err_irq_unmap;
+ 	}
+ 	dev->mal = platform_get_drvdata(dev->mal_dev);
+ 	if (dev->mdio_dev != NULL)
+@@ -3230,8 +3230,6 @@ static int emac_probe(struct platform_de
+ 	mal_unregister_commac(dev->mal, &dev->commac);
+  err_rel_deps:
+ 	emac_put_deps(dev);
+- err_reg_unmap:
+-	iounmap(dev->emacp);
+  err_irq_unmap:
+ 	if (dev->wol_irq)
+ 		irq_dispose_mapping(dev->wol_irq);
+@@ -3276,8 +3274,6 @@ static int emac_remove(struct platform_d
+ 	mal_unregister_commac(dev->mal, &dev->commac);
+ 	emac_put_deps(dev);
+ 
+-	iounmap(dev->emacp);
+-
+ 	if (dev->wol_irq)
+ 		irq_dispose_mapping(dev->wol_irq);
+ 
