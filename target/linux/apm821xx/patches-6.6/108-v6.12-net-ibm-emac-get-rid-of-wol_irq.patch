@@ -1,0 +1,64 @@
+From 39b9b78065cdf4a701879bbe471aa7a0794a8b0f Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Wed, 11 Sep 2024 19:49:03 -0700
+Subject: [PATCH] net: ibm: emac: get rid of wol_irq
+
+This is completely unused.
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Link: https://patch.msgid.link/20240912024903.6201-10-rosenp@gmail.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+---
+ drivers/net/ethernet/ibm/emac/core.c | 13 +++----------
+ 1 file changed, 3 insertions(+), 10 deletions(-)
+
+--- a/drivers/net/ethernet/ibm/emac/core.c
++++ b/drivers/net/ethernet/ibm/emac/core.c
+@@ -3029,9 +3029,8 @@ static int emac_probe(struct platform_de
+ 	if (err)
+ 		goto err_gone;
+ 
+-	/* Get interrupts. EMAC irq is mandatory, WOL irq is optional */
++	/* Get interrupts. EMAC irq is mandatory */
+ 	dev->emac_irq = irq_of_parse_and_map(np, 0);
+-	dev->wol_irq = irq_of_parse_and_map(np, 1);
+ 	if (!dev->emac_irq) {
+ 		printk(KERN_ERR "%pOF: Can't map main interrupt\n", np);
+ 		err = -ENODEV;
+@@ -3055,13 +3054,13 @@ static int emac_probe(struct platform_de
+ 	if (!dev->emacp) {
+ 		dev_err(&ofdev->dev, "can't map device registers");
+ 		err = -ENOMEM;
+-		goto err_irq_unmap;
++		goto err_gone;
+ 	}
+ 
+ 	/* Wait for dependent devices */
+ 	err = emac_wait_deps(dev);
+ 	if (err)
+-		goto err_irq_unmap;
++		goto err_gone;
+ 	dev->mal = platform_get_drvdata(dev->mal_dev);
+ 	if (dev->mdio_dev != NULL)
+ 		dev->mdio_instance = platform_get_drvdata(dev->mdio_dev);
+@@ -3189,9 +3188,6 @@ static int emac_probe(struct platform_de
+ 	mal_unregister_commac(dev->mal, &dev->commac);
+  err_rel_deps:
+ 	emac_put_deps(dev);
+- err_irq_unmap:
+-	if (dev->wol_irq)
+-		irq_dispose_mapping(dev->wol_irq);
+  err_gone:
+ 	if (blist)
+ 		*blist = NULL;
+@@ -3219,9 +3215,6 @@ static int emac_remove(struct platform_d
+ 	mal_unregister_commac(dev->mal, &dev->commac);
+ 	emac_put_deps(dev);
+ 
+-	if (dev->wol_irq)
+-		irq_dispose_mapping(dev->wol_irq);
+-
+ 	return 0;
+ }
+ 
