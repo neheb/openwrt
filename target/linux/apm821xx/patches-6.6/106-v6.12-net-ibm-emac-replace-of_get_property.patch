@@ -1,0 +1,59 @@
+From cc0c92ff662d642dec2e3b85ef14265677ba7fb9 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Wed, 11 Sep 2024 19:49:01 -0700
+Subject: [PATCH] net: ibm: emac: replace of_get_property
+
+of_property_read_u32 can be used.
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Link: https://patch.msgid.link/20240912024903.6201-8-rosenp@gmail.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+---
+ drivers/net/ethernet/ibm/emac/core.c | 20 +++++++++-----------
+ 1 file changed, 9 insertions(+), 11 deletions(-)
+
+--- a/drivers/net/ethernet/ibm/emac/core.c
++++ b/drivers/net/ethernet/ibm/emac/core.c
+@@ -2444,15 +2444,14 @@ static int emac_wait_deps(struct emac_in
+ static int emac_read_uint_prop(struct device_node *np, const char *name,
+ 			       u32 *val, int fatal)
+ {
+-	int len;
+-	const u32 *prop = of_get_property(np, name, &len);
+-	if (prop == NULL || len < sizeof(u32)) {
++	int err;
++
++	err = of_property_read_u32(np, name, val);
++	if (err) {
+ 		if (fatal)
+-			printk(KERN_ERR "%pOF: missing %s property\n",
+-			       np, name);
+-		return -ENODEV;
++			pr_err("%pOF: missing %s property", np, name);
++		return err;
+ 	}
+-	*val = *prop;
+ 	return 0;
+ }
+ 
+@@ -3303,16 +3302,15 @@ static void __init emac_make_bootlist(vo
+ 
+ 	/* Collect EMACs */
+ 	while((np = of_find_all_nodes(np)) != NULL) {
+-		const u32 *idx;
++		u32 idx;
+ 
+ 		if (of_match_node(emac_match, np) == NULL)
+ 			continue;
+ 		if (of_property_read_bool(np, "unused"))
+ 			continue;
+-		idx = of_get_property(np, "cell-index", NULL);
+-		if (idx == NULL)
++		if (of_property_read_u32(np, "cell-index", &idx))
+ 			continue;
+-		cell_indices[i] = *idx;
++		cell_indices[i] = idx;
+ 		emac_boot_list[i++] = of_node_get(np);
+ 		if (i >= EMAC_BOOT_LIST_SIZE) {
+ 			of_node_put(np);
