@@ -41,9 +41,10 @@
 				};
 
 				partition@1e000 {
-					compatible = "fixed-partitions";
 					reg = <0x0001e000 0x00002000>;
 					label = "u-boot-env";
+
+					compatible = "fixed-partitions";
 					#address-cells = <1>;
 					#size-cells = <1>;
 
