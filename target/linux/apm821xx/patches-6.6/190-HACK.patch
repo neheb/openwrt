@@ -1,0 +1,313 @@
+--- a/drivers/net/ethernet/ibm/emac/core.c
++++ b/drivers/net/ethernet/ibm/emac/core.c
+@@ -1727,6 +1727,7 @@ static inline int emac_rx_sg_append(stru
+ /* NAPI poll context */
+ static int emac_poll_rx(void *param, int budget)
+ {
++	LIST_HEAD(rx_list);
+ 	struct emac_instance *dev = param;
+ 	int slot = dev->rx_slot, received = 0;
+ 
+@@ -1783,8 +1784,7 @@ static int emac_poll_rx(void *param, int
+ 		skb->protocol = eth_type_trans(skb, dev->ndev);
+ 		emac_rx_csum(dev, skb, ctrl);
+ 
+-		if (unlikely(netif_receive_skb(skb) == NET_RX_DROP))
+-			++dev->estats.rx_dropped_stack;
++		list_add_tail(&skb->list, &rx_list);
+ 	next:
+ 		++dev->stats.rx_packets;
+ 	skip:
+@@ -1828,6 +1828,8 @@ static int emac_poll_rx(void *param, int
+ 		goto next;
+ 	}
+ 
++	netif_receive_skb_list(&rx_list);
++
+ 	if (received) {
+ 		DBG2(dev, "rx %d BDs" NL, received);
+ 		dev->rx_slot = slot;
+@@ -2935,9 +2937,12 @@ static int emac_init_config(struct emac_
+ 
+ 	/* Read MAC-address */
+ 	err = of_get_ethdev_address(np, dev->ndev);
+-	if (err)
+-		return dev_err_probe(&dev->ofdev->dev, err,
+-				     "Can't get valid [local-]mac-address from OF !\n");
++	if (err == -EPROBE_DEFER)
++		return err;
++	if (err) {
++		dev_warn(&dev->ofdev->dev, "Can't get valid mac-address. Generating random.");
++		eth_hw_addr_random(dev->ndev);
++	}
+ 
+ 	/* IAHT and GAHT filter parameterization */
+ 	if (emac_has_feature(dev, EMAC_FTR_EMAC4SYNC)) {
+@@ -3019,8 +3024,14 @@ static int emac_probe(struct platform_de
+ 	SET_NETDEV_DEV(ndev, &ofdev->dev);
+ 
+ 	/* Initialize some embedded data structures */
+-	mutex_init(&dev->mdio_lock);
+-	mutex_init(&dev->link_lock);
++	err = devm_mutex_init(&ofdev->dev, &dev->mdio_lock);
++	if (err)
++		return err;
++
++	err = devm_mutex_init(&ofdev->dev, &dev->link_lock);
++	if (err)
++		return err;
++
+ 	spin_lock_init(&dev->lock);
+ 	INIT_WORK(&dev->reset_work, emac_reset_work);
+ 
+@@ -3029,15 +3040,8 @@ static int emac_probe(struct platform_de
+ 	if (err)
+ 		goto err_gone;
+ 
+-	/* Get interrupts. EMAC irq is mandatory */
+-	dev->emac_irq = irq_of_parse_and_map(np, 0);
+-	if (!dev->emac_irq) {
+-		printk(KERN_ERR "%pOF: Can't map main interrupt\n", np);
+-		err = -ENODEV;
+-		goto err_gone;
+-	}
+-
+ 	/* Setup error IRQ handler */
++	dev->emac_irq = platform_get_irq(ofdev, 0);
+ 	err = devm_request_irq(&ofdev->dev, dev->emac_irq, emac_irq, 0, "EMAC",
+ 			       dev);
+ 	if (err) {
+@@ -3048,12 +3052,10 @@ static int emac_probe(struct platform_de
+ 
+ 	ndev->irq = dev->emac_irq;
+ 
+-	/* Map EMAC regs */
+-	// TODO : platform_get_resource() and devm_ioremap_resource()
+-	dev->emacp = devm_of_iomap(&ofdev->dev, np, 0, NULL);
+-	if (!dev->emacp) {
++	dev->emacp = devm_platform_ioremap_resource(ofdev, 0);
++	if (IS_ERR(dev->emacp)) {
+ 		dev_err(&ofdev->dev, "can't map device registers");
+-		err = -ENOMEM;
++		err = PTR_ERR(dev->emacp);
+ 		goto err_gone;
+ 	}
+ 
+@@ -3253,21 +3255,17 @@ static void __init emac_make_bootlist(vo
+ 	int cell_indices[EMAC_BOOT_LIST_SIZE];
+ 
+ 	/* Collect EMACs */
+-	while((np = of_find_all_nodes(np)) != NULL) {
++	while((np = of_find_matching_node(np, emac_match))) {
+ 		u32 idx;
+ 
+-		if (of_match_node(emac_match, np) == NULL)
+-			continue;
+ 		if (of_property_read_bool(np, "unused"))
+ 			continue;
+ 		if (of_property_read_u32(np, "cell-index", &idx))
+ 			continue;
+ 		cell_indices[i] = idx;
+-		emac_boot_list[i++] = of_node_get(np);
+-		if (i >= EMAC_BOOT_LIST_SIZE) {
+-			of_node_put(np);
++		if (i >= EMAC_BOOT_LIST_SIZE)
+ 			break;
+-		}
++		emac_boot_list[i++] = of_node_get(np);
+ 	}
+ 	max = i;
+ 
+@@ -3283,42 +3281,10 @@ static void __init emac_make_bootlist(vo
+ 
+ static int __init emac_init(void)
+ {
+-	int rc;
+-
+-	printk(KERN_INFO DRV_DESC ", version " DRV_VERSION "\n");
+-
+ 	/* Build EMAC boot list */
+ 	emac_make_bootlist();
+ 
+-	/* Init submodules */
+-	rc = mal_init();
+-	if (rc)
+-		goto err;
+-	rc = zmii_init();
+-	if (rc)
+-		goto err_mal;
+-	rc = rgmii_init();
+-	if (rc)
+-		goto err_zmii;
+-	rc = tah_init();
+-	if (rc)
+-		goto err_rgmii;
+-	rc = platform_driver_register(&emac_driver);
+-	if (rc)
+-		goto err_tah;
+-
+-	return 0;
+-
+- err_tah:
+-	tah_exit();
+- err_rgmii:
+-	rgmii_exit();
+- err_zmii:
+-	zmii_exit();
+- err_mal:
+-	mal_exit();
+- err:
+-	return rc;
++	return platform_driver_register(&emac_driver);
+ }
+ 
+ static void __exit emac_exit(void)
+@@ -3327,11 +3293,6 @@ static void __exit emac_exit(void)
+ 
+ 	platform_driver_unregister(&emac_driver);
+ 
+-	tah_exit();
+-	rgmii_exit();
+-	zmii_exit();
+-	mal_exit();
+-
+ 	/* Destroy EMAC boot list */
+ 	for (i = 0; i < EMAC_BOOT_LIST_SIZE; i++)
+ 		of_node_put(emac_boot_list[i]);
+--- a/drivers/net/ethernet/ibm/emac/mal.c
++++ b/drivers/net/ethernet/ibm/emac/mal.c
+@@ -746,12 +746,4 @@ static struct platform_driver mal_of_dri
+ 	.remove = mal_remove,
+ };
+ 
+-int __init mal_init(void)
+-{
+-	return platform_driver_register(&mal_of_driver);
+-}
+-
+-void mal_exit(void)
+-{
+-	platform_driver_unregister(&mal_of_driver);
+-}
++module_platform_driver(mal_of_driver);
+--- a/drivers/net/ethernet/ibm/emac/mal.h
++++ b/drivers/net/ethernet/ibm/emac/mal.h
+@@ -252,10 +252,6 @@ static inline int mal_has_feature(struct
+ 		(MAL_FTRS_POSSIBLE & dev->features & feature);
+ }
+ 
+-/* Register MAL devices */
+-int mal_init(void);
+-void mal_exit(void);
+-
+ int mal_register_commac(struct mal_instance *mal,
+ 			struct mal_commac *commac);
+ void mal_unregister_commac(struct mal_instance *mal,
+--- a/drivers/net/ethernet/ibm/emac/rgmii.c
++++ b/drivers/net/ethernet/ibm/emac/rgmii.c
+@@ -280,12 +280,4 @@ static struct platform_driver rgmii_driv
+ 	.probe = rgmii_probe,
+ };
+ 
+-int __init rgmii_init(void)
+-{
+-	return platform_driver_register(&rgmii_driver);
+-}
+-
+-void rgmii_exit(void)
+-{
+-	platform_driver_unregister(&rgmii_driver);
+-}
++module_platform_driver(rgmii_driver);
+--- a/drivers/net/ethernet/ibm/emac/rgmii.h
++++ b/drivers/net/ethernet/ibm/emac/rgmii.h
+@@ -52,8 +52,6 @@ struct rgmii_instance {
+ 
+ #ifdef CONFIG_IBM_EMAC_RGMII
+ 
+-int rgmii_init(void);
+-void rgmii_exit(void);
+ int rgmii_attach(struct platform_device *ofdev, int input, int mode);
+ void rgmii_detach(struct platform_device *ofdev, int input);
+ void rgmii_get_mdio(struct platform_device *ofdev, int input);
+@@ -64,8 +62,6 @@ void *rgmii_dump_regs(struct platform_de
+ 
+ #else
+ 
+-# define rgmii_init()		0
+-# define rgmii_exit()		do { } while(0)
+ # define rgmii_attach(x,y,z)	(-ENXIO)
+ # define rgmii_detach(x,y)	do { } while(0)
+ # define rgmii_get_mdio(o,i)	do { } while (0)
+--- a/drivers/net/ethernet/ibm/emac/tah.c
++++ b/drivers/net/ethernet/ibm/emac/tah.c
+@@ -138,12 +138,4 @@ static struct platform_driver tah_driver
+ 	.probe = tah_probe,
+ };
+ 
+-int __init tah_init(void)
+-{
+-	return platform_driver_register(&tah_driver);
+-}
+-
+-void tah_exit(void)
+-{
+-	platform_driver_unregister(&tah_driver);
+-}
++module_platform_driver(tah_driver);
+--- a/drivers/net/ethernet/ibm/emac/tah.h
++++ b/drivers/net/ethernet/ibm/emac/tah.h
+@@ -68,8 +68,6 @@ struct tah_instance {
+ 
+ #ifdef CONFIG_IBM_EMAC_TAH
+ 
+-int tah_init(void);
+-void tah_exit(void);
+ int tah_attach(struct platform_device *ofdev, int channel);
+ void tah_detach(struct platform_device *ofdev, int channel);
+ void tah_reset(struct platform_device *ofdev);
+@@ -78,8 +76,6 @@ void *tah_dump_regs(struct platform_devi
+ 
+ #else
+ 
+-# define tah_init()		0
+-# define tah_exit()		do { } while(0)
+ # define tah_attach(x,y)	(-ENXIO)
+ # define tah_detach(x,y)	do { } while(0)
+ # define tah_reset(x)		do { } while(0)
+--- a/drivers/net/ethernet/ibm/emac/zmii.c
++++ b/drivers/net/ethernet/ibm/emac/zmii.c
+@@ -286,12 +286,4 @@ static struct platform_driver zmii_drive
+ 	.probe = zmii_probe,
+ };
+ 
+-int __init zmii_init(void)
+-{
+-	return platform_driver_register(&zmii_driver);
+-}
+-
+-void zmii_exit(void)
+-{
+-	platform_driver_unregister(&zmii_driver);
+-}
++module_platform_driver(zmii_driver);
+--- a/drivers/net/ethernet/ibm/emac/zmii.h
++++ b/drivers/net/ethernet/ibm/emac/zmii.h
+@@ -48,8 +48,6 @@ struct zmii_instance {
+ 
+ #ifdef CONFIG_IBM_EMAC_ZMII
+ 
+-int zmii_init(void);
+-void zmii_exit(void);
+ int zmii_attach(struct platform_device *ofdev, int input,
+ 		phy_interface_t *mode);
+ void zmii_detach(struct platform_device *ofdev, int input);
+@@ -60,8 +58,6 @@ int zmii_get_regs_len(struct platform_de
+ void *zmii_dump_regs(struct platform_device *ofdev, void *buf);
+ 
+ #else
+-# define zmii_init()		0
+-# define zmii_exit()		do { } while(0)
+ # define zmii_attach(x,y,z)	(-ENXIO)
+ # define zmii_detach(x,y)	do { } while(0)
+ # define zmii_get_mdio(x,y)	do { } while(0)
