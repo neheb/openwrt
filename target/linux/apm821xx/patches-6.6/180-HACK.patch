@@ -1,0 +1,428 @@
+--- a/drivers/net/ethernet/ibm/emac/mal.c
++++ b/drivers/net/ethernet/ibm/emac/mal.c
+@@ -524,7 +524,8 @@ static int mal_probe(struct platform_dev
+ 	unsigned long irqflags;
+ 	irq_handler_t hdlr_serr, hdlr_txde, hdlr_rxde;
+ 
+-	mal = kzalloc(sizeof(struct mal_instance), GFP_KERNEL);
++	mal = devm_kzalloc(&ofdev->dev, sizeof(struct mal_instance),
++			   GFP_KERNEL);
+ 	if (!mal)
+ 		return -ENOMEM;
+ 
+@@ -539,8 +540,7 @@ static int mal_probe(struct platform_dev
+ 		printk(KERN_ERR
+ 		       "mal%d: can't find MAL num-tx-chans property!\n",
+ 		       index);
+-		err = -ENODEV;
+-		goto fail;
++		return -ENODEV;
+ 	}
+ 	mal->num_tx_chans = prop[0];
+ 
+@@ -549,26 +549,10 @@ static int mal_probe(struct platform_dev
+ 		printk(KERN_ERR
+ 		       "mal%d: can't find MAL num-rx-chans property!\n",
+ 		       index);
+-		err = -ENODEV;
+-		goto fail;
++		return -ENODEV;
+ 	}
+ 	mal->num_rx_chans = prop[0];
+ 
+-	dcr_base = dcr_resource_start(ofdev->dev.of_node, 0);
+-	if (dcr_base == 0) {
+-		printk(KERN_ERR
+-		       "mal%d: can't find DCR resource!\n", index);
+-		err = -ENODEV;
+-		goto fail;
+-	}
+-	mal->dcr_host = dcr_map(ofdev->dev.of_node, dcr_base, 0x100);
+-	if (!DCR_MAP_OK(mal->dcr_host)) {
+-		printk(KERN_ERR
+-		       "mal%d: failed to map DCRs !\n", index);
+-		err = -ENODEV;
+-		goto fail;
+-	}
+-
+ 	if (of_device_is_compatible(ofdev->dev.of_node, "ibm,mcmal-405ez")) {
+ #if defined(CONFIG_IBM_EMAC_MAL_CLR_ICINTSTAT) && \
+ 		defined(CONFIG_IBM_EMAC_MAL_COMMON_ERR)
+@@ -577,28 +561,21 @@ static int mal_probe(struct platform_dev
+ #else
+ 		printk(KERN_ERR "%pOF: Support for 405EZ not enabled!\n",
+ 				ofdev->dev.of_node);
+-		err = -ENODEV;
+-		goto fail;
++		return -ENODEV;
+ #endif
+ 	}
+ 
+-	mal->txeob_irq = irq_of_parse_and_map(ofdev->dev.of_node, 0);
+-	mal->rxeob_irq = irq_of_parse_and_map(ofdev->dev.of_node, 1);
+-	mal->serr_irq = irq_of_parse_and_map(ofdev->dev.of_node, 2);
+-
+-	if (mal_has_feature(mal, MAL_FTR_COMMON_ERR_INT)) {
+-		mal->txde_irq = mal->rxde_irq = mal->serr_irq;
+-	} else {
+-		mal->txde_irq = irq_of_parse_and_map(ofdev->dev.of_node, 3);
+-		mal->rxde_irq = irq_of_parse_and_map(ofdev->dev.of_node, 4);
++	dcr_base = dcr_resource_start(ofdev->dev.of_node, 0);
++	if (dcr_base == 0) {
++		printk(KERN_ERR
++		       "mal%d: can't find DCR resource!\n", index);
++		return -ENODEV;
+ 	}
+-
+-	if (!mal->txeob_irq || !mal->rxeob_irq || !mal->serr_irq ||
+-	    !mal->txde_irq  || !mal->rxde_irq) {
++	mal->dcr_host = dcr_map(ofdev->dev.of_node, dcr_base, 0x100);
++	if (!DCR_MAP_OK(mal->dcr_host)) {
+ 		printk(KERN_ERR
+-		       "mal%d: failed to map interrupts !\n", index);
+-		err = -ENODEV;
+-		goto fail_unmap;
++		       "mal%d: failed to map DCRs !\n", index);
++		return -ENODEV;
+ 	}
+ 
+ 	INIT_LIST_HEAD(&mal->poll_list);
+@@ -650,31 +627,43 @@ static int mal_probe(struct platform_dev
+ 			     sizeof(struct mal_descriptor) *
+ 			     mal_rx_bd_offset(mal, i));
+ 
++	mal->txeob_irq = platform_get_irq(ofdev, 0);
++	mal->rxeob_irq = platform_get_irq(ofdev, 1);
++	mal->serr_irq = platform_get_irq(ofdev, 2);
++
+ 	if (mal_has_feature(mal, MAL_FTR_COMMON_ERR_INT)) {
++		mal->txde_irq = mal->rxde_irq = mal->serr_irq;
+ 		irqflags = IRQF_SHARED;
+ 		hdlr_serr = hdlr_txde = hdlr_rxde = mal_int;
+ 	} else {
++		mal->txde_irq = platform_get_irq(ofdev, 3);
++		mal->rxde_irq = platform_get_irq(ofdev, 4);
+ 		irqflags = 0;
+ 		hdlr_serr = mal_serr;
+ 		hdlr_txde = mal_txde;
+ 		hdlr_rxde = mal_rxde;
+ 	}
+ 
+-	err = request_irq(mal->serr_irq, hdlr_serr, irqflags, "MAL SERR", mal);
++	err = devm_request_irq(&ofdev->dev, mal->serr_irq, hdlr_serr, irqflags,
++			       "MAL SERR", mal);
+ 	if (err)
+ 		goto fail2;
+-	err = request_irq(mal->txde_irq, hdlr_txde, irqflags, "MAL TX DE", mal);
++	err = devm_request_irq(&ofdev->dev, mal->txde_irq, hdlr_txde, irqflags,
++			       "MAL TX DE", mal);
+ 	if (err)
+-		goto fail3;
+-	err = request_irq(mal->txeob_irq, mal_txeob, 0, "MAL TX EOB", mal);
++		goto fail2;
++	err = devm_request_irq(&ofdev->dev, mal->txeob_irq, mal_txeob, 0,
++			       "MAL TX EOB", mal);
+ 	if (err)
+-		goto fail4;
+-	err = request_irq(mal->rxde_irq, hdlr_rxde, irqflags, "MAL RX DE", mal);
++		goto fail2;
++	err = devm_request_irq(&ofdev->dev, mal->rxde_irq, hdlr_rxde, irqflags,
++			       "MAL RX DE", mal);
+ 	if (err)
+-		goto fail5;
+-	err = request_irq(mal->rxeob_irq, mal_rxeob, 0, "MAL RX EOB", mal);
++		goto fail2;
++	err = devm_request_irq(&ofdev->dev, mal->rxeob_irq, mal_rxeob, 0,
++			       "MAL RX EOB", mal);
+ 	if (err)
+-		goto fail6;
++		goto fail2;
+ 
+ 	/* Enable all MAL SERR interrupt sources */
+ 	set_mal_dcrn(mal, MAL_IER, MAL_IER_EVENTS);
+@@ -693,21 +682,10 @@ static int mal_probe(struct platform_dev
+ 
+ 	return 0;
+ 
+- fail6:
+-	free_irq(mal->rxde_irq, mal);
+- fail5:
+-	free_irq(mal->txeob_irq, mal);
+- fail4:
+-	free_irq(mal->txde_irq, mal);
+- fail3:
+-	free_irq(mal->serr_irq, mal);
+  fail2:
+ 	dma_free_coherent(&ofdev->dev, bd_size, mal->bd_virt, mal->bd_dma);
+  fail_unmap:
+ 	dcr_unmap(mal->dcr_host, 0x100);
+- fail:
+-	kfree(mal);
+-
+ 	return err;
+ }
+ 
+@@ -726,20 +704,15 @@ static int mal_remove(struct platform_de
+ 		       "mal%d: commac list is not empty on remove!\n",
+ 		       mal->index);
+ 
+-	free_irq(mal->serr_irq, mal);
+-	free_irq(mal->txde_irq, mal);
+-	free_irq(mal->txeob_irq, mal);
+-	free_irq(mal->rxde_irq, mal);
+-	free_irq(mal->rxeob_irq, mal);
+-
+ 	mal_reset(mal);
+ 
++	dcr_unmap(mal->dcr_host, 0x100);
++
+ 	dma_free_coherent(&ofdev->dev,
+ 			  sizeof(struct mal_descriptor) *
+-			  (NUM_TX_BUFF * mal->num_tx_chans +
+-			   NUM_RX_BUFF * mal->num_rx_chans), mal->bd_virt,
+-			  mal->bd_dma);
+-	kfree(mal);
++				  (NUM_TX_BUFF * mal->num_tx_chans +
++				   NUM_RX_BUFF * mal->num_rx_chans),
++			  mal->bd_virt, mal->bd_dma);
+ 
+ 	return 0;
+ }
+--- a/drivers/net/ethernet/ibm/emac/rgmii.c
++++ b/drivers/net/ethernet/ibm/emac/rgmii.c
+@@ -216,31 +216,24 @@ void *rgmii_dump_regs(struct platform_de
+ 
+ static int rgmii_probe(struct platform_device *ofdev)
+ {
+-	struct device_node *np = ofdev->dev.of_node;
+ 	struct rgmii_instance *dev;
+-	struct resource regs;
+-	int rc;
++	int err;
+ 
+-	rc = -ENOMEM;
+-	dev = kzalloc(sizeof(struct rgmii_instance), GFP_KERNEL);
+-	if (dev == NULL)
+-		goto err_gone;
++	dev = devm_kzalloc(&ofdev->dev, sizeof(struct rgmii_instance),
++			   GFP_KERNEL);
++	if (!dev)
++		return -ENOMEM;
++
++	err = devm_mutex_init(&ofdev->dev, &dev->lock);
++	if (err)
++		return err;
+ 
+-	mutex_init(&dev->lock);
+ 	dev->ofdev = ofdev;
+ 
+-	rc = -ENXIO;
+-	if (of_address_to_resource(np, 0, &regs)) {
+-		printk(KERN_ERR "%pOF: Can't get registers address\n", np);
+-		goto err_free;
+-	}
+-
+-	rc = -ENOMEM;
+-	dev->base = (struct rgmii_regs __iomem *)ioremap(regs.start,
+-						 sizeof(struct rgmii_regs));
+-	if (dev->base == NULL) {
+-		printk(KERN_ERR "%pOF: Can't map device registers!\n", np);
+-		goto err_free;
++	dev->base = devm_platform_ioremap_resource(ofdev, 0);
++	if (IS_ERR(dev->base)) {
++		dev_err(&ofdev->dev, "can't map device registers");
++		return PTR_ERR(dev->base);
+ 	}
+ 
+ 	/* Check for RGMII flags */
+@@ -266,23 +259,6 @@ static int rgmii_probe(struct platform_d
+ 	platform_set_drvdata(ofdev, dev);
+ 
+ 	return 0;
+-
+- err_free:
+-	kfree(dev);
+- err_gone:
+-	return rc;
+-}
+-
+-static int rgmii_remove(struct platform_device *ofdev)
+-{
+-	struct rgmii_instance *dev = platform_get_drvdata(ofdev);
+-
+-	WARN_ON(dev->users != 0);
+-
+-	iounmap(dev->base);
+-	kfree(dev);
+-
+-	return 0;
+ }
+ 
+ static const struct of_device_id rgmii_match[] =
+@@ -302,7 +278,6 @@ static struct platform_driver rgmii_driv
+ 		.of_match_table = rgmii_match,
+ 	},
+ 	.probe = rgmii_probe,
+-	.remove = rgmii_remove,
+ };
+ 
+ int __init rgmii_init(void)
+--- a/drivers/net/ethernet/ibm/emac/tah.c
++++ b/drivers/net/ethernet/ibm/emac/tah.c
+@@ -87,31 +87,24 @@ void *tah_dump_regs(struct platform_devi
+ 
+ static int tah_probe(struct platform_device *ofdev)
+ {
+-	struct device_node *np = ofdev->dev.of_node;
+ 	struct tah_instance *dev;
+-	struct resource regs;
+-	int rc;
++	int err;
+ 
+-	rc = -ENOMEM;
+-	dev = kzalloc(sizeof(struct tah_instance), GFP_KERNEL);
+-	if (dev == NULL)
+-		goto err_gone;
++	dev = devm_kzalloc(&ofdev->dev, sizeof(struct tah_instance),
++			   GFP_KERNEL);
++	if (!dev)
++		return -ENOMEM;
++
++	err = devm_mutex_init(&ofdev->dev, &dev->lock);
++	if (err)
++		return err;
+ 
+-	mutex_init(&dev->lock);
+ 	dev->ofdev = ofdev;
+ 
+-	rc = -ENXIO;
+-	if (of_address_to_resource(np, 0, &regs)) {
+-		printk(KERN_ERR "%pOF: Can't get registers address\n", np);
+-		goto err_free;
+-	}
+-
+-	rc = -ENOMEM;
+-	dev->base = (struct tah_regs __iomem *)ioremap(regs.start,
+-					       sizeof(struct tah_regs));
+-	if (dev->base == NULL) {
+-		printk(KERN_ERR "%pOF: Can't map device registers!\n", np);
+-		goto err_free;
++	dev->base = devm_platform_ioremap_resource(ofdev, 0);
++	if (IS_ERR(dev->base)) {
++		dev_err(&ofdev->dev, "can't map device registers");
++		return PTR_ERR(dev->base);
+ 	}
+ 
+ 	platform_set_drvdata(ofdev, dev);
+@@ -123,23 +116,6 @@ static int tah_probe(struct platform_dev
+ 	wmb();
+ 
+ 	return 0;
+-
+- err_free:
+-	kfree(dev);
+- err_gone:
+-	return rc;
+-}
+-
+-static int tah_remove(struct platform_device *ofdev)
+-{
+-	struct tah_instance *dev = platform_get_drvdata(ofdev);
+-
+-	WARN_ON(dev->users != 0);
+-
+-	iounmap(dev->base);
+-	kfree(dev);
+-
+-	return 0;
+ }
+ 
+ static const struct of_device_id tah_match[] =
+@@ -160,7 +136,6 @@ static struct platform_driver tah_driver
+ 		.of_match_table = tah_match,
+ 	},
+ 	.probe = tah_probe,
+-	.remove = tah_remove,
+ };
+ 
+ int __init tah_init(void)
+--- a/drivers/net/ethernet/ibm/emac/zmii.c
++++ b/drivers/net/ethernet/ibm/emac/zmii.c
+@@ -232,32 +232,25 @@ void *zmii_dump_regs(struct platform_dev
+ 
+ static int zmii_probe(struct platform_device *ofdev)
+ {
+-	struct device_node *np = ofdev->dev.of_node;
+ 	struct zmii_instance *dev;
+-	struct resource regs;
+-	int rc;
++	int err;
+ 
+-	rc = -ENOMEM;
+-	dev = kzalloc(sizeof(struct zmii_instance), GFP_KERNEL);
+-	if (dev == NULL)
+-		goto err_gone;
++	dev = devm_kzalloc(&ofdev->dev, sizeof(struct zmii_instance),
++			   GFP_KERNEL);
++	if (!dev)
++		return -ENOMEM;
++
++	err = devm_mutex_init(&ofdev->dev, &dev->lock);
++	if (err)
++		return err;
+ 
+-	mutex_init(&dev->lock);
+ 	dev->ofdev = ofdev;
+ 	dev->mode = PHY_INTERFACE_MODE_NA;
+ 
+-	rc = -ENXIO;
+-	if (of_address_to_resource(np, 0, &regs)) {
+-		printk(KERN_ERR "%pOF: Can't get registers address\n", np);
+-		goto err_free;
+-	}
+-
+-	rc = -ENOMEM;
+-	dev->base = (struct zmii_regs __iomem *)ioremap(regs.start,
+-						sizeof(struct zmii_regs));
+-	if (dev->base == NULL) {
+-		printk(KERN_ERR "%pOF: Can't map device registers!\n", np);
+-		goto err_free;
++	dev->base = devm_platform_ioremap_resource(ofdev, 0);
++	if (IS_ERR(dev->base)) {
++		dev_err(&ofdev->dev, "can't map device registers");
++		return PTR_ERR(dev->base);
+ 	}
+ 
+ 	/* We may need FER value for autodetection later */
+@@ -271,23 +264,6 @@ static int zmii_probe(struct platform_de
+ 	platform_set_drvdata(ofdev, dev);
+ 
+ 	return 0;
+-
+- err_free:
+-	kfree(dev);
+- err_gone:
+-	return rc;
+-}
+-
+-static int zmii_remove(struct platform_device *ofdev)
+-{
+-	struct zmii_instance *dev = platform_get_drvdata(ofdev);
+-
+-	WARN_ON(dev->users != 0);
+-
+-	iounmap(dev->base);
+-	kfree(dev);
+-
+-	return 0;
+ }
+ 
+ static const struct of_device_id zmii_match[] =
+@@ -308,7 +284,6 @@ static struct platform_driver zmii_drive
+ 		.of_match_table = zmii_match,
+ 	},
+ 	.probe = zmii_probe,
+-	.remove = zmii_remove,
+ };
+ 
+ int __init zmii_init(void)
