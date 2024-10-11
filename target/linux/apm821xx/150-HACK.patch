@@ -1,0 +1,835 @@
+diff --git a/drivers/net/ethernet/ibm/emac/core.c b/drivers/net/ethernet/ibm/emac/core.c
+index dac570f3c110..a4701e2f9f73 100644
+--- a/drivers/net/ethernet/ibm/emac/core.c
++++ b/drivers/net/ethernet/ibm/emac/core.c
+@@ -95,21 +95,6 @@ MODULE_LICENSE("GPL");
+ static u32 busy_phy_map;
+ static DEFINE_MUTEX(emac_phy_map_lock);
+ 
+-/* Having stable interface names is a doomed idea. However, it would be nice
+- * if we didn't have completely random interface names at boot too :-) It's
+- * just a matter of making everybody's life easier. Since we are doing
+- * threaded probing, it's a bit harder though. The base idea here is that
+- * we make up a list of all emacs in the device-tree before we register the
+- * driver. Every emac will then wait for the previous one in the list to
+- * initialize before itself. We should also keep that list ordered by
+- * cell_index.
+- * That list is only 4 entries long, meaning that additional EMACs don't
+- * get ordering guarantees unless EMAC_BOOT_LIST_SIZE is increased.
+- */
+-
+-#define EMAC_BOOT_LIST_SIZE	4
+-static struct device_node *emac_boot_list[EMAC_BOOT_LIST_SIZE];
+-
+ /* I don't want to litter system log with timeout errors
+  * when we have brain-damaged PHY.
+  */
+@@ -1727,6 +1712,7 @@ static inline int emac_rx_sg_append(struct emac_instance *dev, int slot)
+ /* NAPI poll context */
+ static int emac_poll_rx(void *param, int budget)
+ {
++	LIST_HEAD(rx_list);
+ 	struct emac_instance *dev = param;
+ 	int slot = dev->rx_slot, received = 0;
+ 
+@@ -1783,8 +1769,7 @@ static int emac_poll_rx(void *param, int budget)
+ 		skb->protocol = eth_type_trans(skb, dev->ndev);
+ 		emac_rx_csum(dev, skb, ctrl);
+ 
+-		if (unlikely(netif_receive_skb(skb) == NET_RX_DROP))
+-			++dev->estats.rx_dropped_stack;
++		list_add_tail(&skb->list, &rx_list);
+ 	next:
+ 		++dev->stats.rx_packets;
+ 	skip:
+@@ -1828,6 +1813,8 @@ static int emac_poll_rx(void *param, int budget)
+ 		goto next;
+ 	}
+ 
++	netif_receive_skb_list(&rx_list);
++
+ 	if (received) {
+ 		DBG2(dev, "rx %d BDs" NL, received);
+ 		dev->rx_slot = slot;
+@@ -2328,14 +2315,12 @@ struct emac_depentry {
+ #define	EMAC_DEP_RGMII_IDX	2
+ #define	EMAC_DEP_TAH_IDX	3
+ #define	EMAC_DEP_MDIO_IDX	4
+-#define	EMAC_DEP_PREV_IDX	5
+-#define	EMAC_DEP_COUNT		6
++#define	EMAC_DEP_COUNT		5
+ 
+ static int emac_check_deps(struct emac_instance *dev,
+ 			   struct emac_depentry *deps)
+ {
+ 	int i, there = 0;
+-	struct device_node *np;
+ 
+ 	for (i = 0; i < EMAC_DEP_COUNT; i++) {
+ 		/* no dependency on that item, allright */
+@@ -2343,17 +2328,6 @@ static int emac_check_deps(struct emac_instance *dev,
+ 			there++;
+ 			continue;
+ 		}
+-		/* special case for blist as the dependency might go away */
+-		if (i == EMAC_DEP_PREV_IDX) {
+-			np = *(dev->blist - 1);
+-			if (np == NULL) {
+-				deps[i].phandle = 0;
+-				there++;
+-				continue;
+-			}
+-			if (deps[i].node == NULL)
+-				deps[i].node = of_node_get(np);
+-		}
+ 		if (deps[i].node == NULL)
+ 			deps[i].node = of_find_node_by_phandle(deps[i].phandle);
+ 		if (deps[i].node == NULL)
+@@ -2395,8 +2369,6 @@ static int emac_wait_deps(struct emac_instance *dev)
+ 		deps[EMAC_DEP_TAH_IDX].phandle = dev->tah_ph;
+ 	if (dev->mdio_ph)
+ 		deps[EMAC_DEP_MDIO_IDX].phandle = dev->mdio_ph;
+-	if (dev->blist && dev->blist > emac_boot_list)
+-		deps[EMAC_DEP_PREV_IDX].phandle = 0xffffffffu;
+ 	err = emac_check_deps(dev, deps);
+ 	for (i = 0; i < EMAC_DEP_COUNT; i++) {
+ 		of_node_put(deps[i].node);
+@@ -2410,7 +2382,6 @@ static int emac_wait_deps(struct emac_instance *dev)
+ 		dev->tah_dev = deps[EMAC_DEP_TAH_IDX].ofdev;
+ 		dev->mdio_dev = deps[EMAC_DEP_MDIO_IDX].ofdev;
+ 	}
+-	platform_device_put(deps[EMAC_DEP_PREV_IDX].ofdev);
+ 	return err;
+ }
+ 
+@@ -2991,8 +2962,7 @@ static int emac_probe(struct platform_device *ofdev)
+ 	struct net_device *ndev;
+ 	struct emac_instance *dev;
+ 	struct device_node *np = ofdev->dev.of_node;
+-	struct device_node **blist = NULL;
+-	int err, i;
++	int err;
+ 
+ 	/* Skip unused/unwired EMACS.  We leave the check for an unused
+ 	 * property here for now, but new flat device trees should set a
+@@ -3001,21 +2971,14 @@ static int emac_probe(struct platform_device *ofdev)
+ 	if (of_property_read_bool(np, "unused") || !of_device_is_available(np))
+ 		return -ENODEV;
+ 
+-	/* Find ourselves in the bootlist if we are there */
+-	for (i = 0; i < EMAC_BOOT_LIST_SIZE; i++)
+-		if (emac_boot_list[i] == np)
+-			blist = &emac_boot_list[i];
+-
+ 	/* Allocate our net_device structure */
+-	err = -ENOMEM;
+ 	ndev = devm_alloc_etherdev(&ofdev->dev, sizeof(struct emac_instance));
+ 	if (!ndev)
+-		goto err_gone;
++		return -ENOMEM;
+ 
+ 	dev = netdev_priv(ndev);
+ 	dev->ndev = ndev;
+ 	dev->ofdev = ofdev;
+-	dev->blist = blist;
+ 	SET_NETDEV_DEV(ndev, &ofdev->dev);
+ 
+ 	/* Initialize some embedded data structures */
+@@ -3027,40 +2990,29 @@ static int emac_probe(struct platform_device *ofdev)
+ 	/* Init various config data based on device-tree */
+ 	err = emac_init_config(dev);
+ 	if (err)
+-		goto err_gone;
+-
+-	/* Get interrupts. EMAC irq is mandatory */
+-	dev->emac_irq = irq_of_parse_and_map(np, 0);
+-	if (!dev->emac_irq) {
+-		printk(KERN_ERR "%pOF: Can't map main interrupt\n", np);
+-		err = -ENODEV;
+-		goto err_gone;
+-	}
++		return err;
+ 
+ 	/* Setup error IRQ handler */
++	dev->emac_irq = platform_get_irq(ofdev, 0);
+ 	err = devm_request_irq(&ofdev->dev, dev->emac_irq, emac_irq, 0, "EMAC",
+ 			       dev);
+ 	if (err) {
+-		dev_err_probe(&ofdev->dev, err, "failed to request IRQ %d",
+-			      dev->emac_irq);
+-		goto err_gone;
++		return dev_err_probe(&ofdev->dev, err,
++				     "failed to request IRQ %d", dev->emac_irq);
+ 	}
+ 
+ 	ndev->irq = dev->emac_irq;
+ 
+-	/* Map EMAC regs */
+-	// TODO : platform_get_resource() and devm_ioremap_resource()
+-	dev->emacp = devm_of_iomap(&ofdev->dev, np, 0, NULL);
+-	if (!dev->emacp) {
++	dev->emacp = devm_platform_ioremap_resource(ofdev, 0);
++	if (IS_ERR(dev->emacp)) {
+ 		dev_err(&ofdev->dev, "can't map device registers");
+-		err = -ENOMEM;
+-		goto err_gone;
++		return PTR_ERR(dev->emacp);
+ 	}
+ 
+ 	/* Wait for dependent devices */
+ 	err = emac_wait_deps(dev);
+ 	if (err)
+-		goto err_gone;
++		return err;
+ 	dev->mal = platform_get_drvdata(dev->mal_dev);
+ 	if (dev->mdio_dev != NULL)
+ 		dev->mdio_instance = platform_get_drvdata(dev->mdio_dev);
+@@ -3188,9 +3140,6 @@ static int emac_probe(struct platform_device *ofdev)
+ 	mal_unregister_commac(dev->mal, &dev->commac);
+  err_rel_deps:
+ 	emac_put_deps(dev);
+- err_gone:
+-	if (blist)
+-		*blist = NULL;
+ 	return err;
+ }
+ 
+@@ -3244,96 +3193,4 @@ static struct platform_driver emac_driver = {
+ 	.remove_new = emac_remove,
+ };
+ 
+-static void __init emac_make_bootlist(void)
+-{
+-	struct device_node *np = NULL;
+-	int j, max, i = 0;
+-	int cell_indices[EMAC_BOOT_LIST_SIZE];
+-
+-	/* Collect EMACs */
+-	while((np = of_find_all_nodes(np)) != NULL) {
+-		u32 idx;
+-
+-		if (of_match_node(emac_match, np) == NULL)
+-			continue;
+-		if (of_property_read_bool(np, "unused"))
+-			continue;
+-		if (of_property_read_u32(np, "cell-index", &idx))
+-			continue;
+-		cell_indices[i] = idx;
+-		emac_boot_list[i++] = of_node_get(np);
+-		if (i >= EMAC_BOOT_LIST_SIZE) {
+-			of_node_put(np);
+-			break;
+-		}
+-	}
+-	max = i;
+-
+-	/* Bubble sort them (doh, what a creative algorithm :-) */
+-	for (i = 0; max > 1 && (i < (max - 1)); i++)
+-		for (j = i; j < max; j++) {
+-			if (cell_indices[i] > cell_indices[j]) {
+-				swap(emac_boot_list[i], emac_boot_list[j]);
+-				swap(cell_indices[i], cell_indices[j]);
+-			}
+-		}
+-}
+-
+-static int __init emac_init(void)
+-{
+-	int rc;
+-
+-	printk(KERN_INFO DRV_DESC ", version " DRV_VERSION "\n");
+-
+-	/* Build EMAC boot list */
+-	emac_make_bootlist();
+-
+-	/* Init submodules */
+-	rc = mal_init();
+-	if (rc)
+-		goto err;
+-	rc = zmii_init();
+-	if (rc)
+-		goto err_mal;
+-	rc = rgmii_init();
+-	if (rc)
+-		goto err_zmii;
+-	rc = tah_init();
+-	if (rc)
+-		goto err_rgmii;
+-	rc = platform_driver_register(&emac_driver);
+-	if (rc)
+-		goto err_tah;
+-
+-	return 0;
+-
+- err_tah:
+-	tah_exit();
+- err_rgmii:
+-	rgmii_exit();
+- err_zmii:
+-	zmii_exit();
+- err_mal:
+-	mal_exit();
+- err:
+-	return rc;
+-}
+-
+-static void __exit emac_exit(void)
+-{
+-	int i;
+-
+-	platform_driver_unregister(&emac_driver);
+-
+-	tah_exit();
+-	rgmii_exit();
+-	zmii_exit();
+-	mal_exit();
+-
+-	/* Destroy EMAC boot list */
+-	for (i = 0; i < EMAC_BOOT_LIST_SIZE; i++)
+-		of_node_put(emac_boot_list[i]);
+-}
+-
+-module_init(emac_init);
+-module_exit(emac_exit);
++module_platform_driver(emac_driver);
+diff --git a/drivers/net/ethernet/ibm/emac/mal.c b/drivers/net/ethernet/ibm/emac/mal.c
+index d92dd9c83031..e6354843d856 100644
+--- a/drivers/net/ethernet/ibm/emac/mal.c
++++ b/drivers/net/ethernet/ibm/emac/mal.c
+@@ -524,7 +524,8 @@ static int mal_probe(struct platform_device *ofdev)
+ 	unsigned long irqflags;
+ 	irq_handler_t hdlr_serr, hdlr_txde, hdlr_rxde;
+ 
+-	mal = kzalloc(sizeof(struct mal_instance), GFP_KERNEL);
++	mal = devm_kzalloc(&ofdev->dev, sizeof(struct mal_instance),
++			   GFP_KERNEL);
+ 	if (!mal)
+ 		return -ENOMEM;
+ 
+@@ -539,8 +540,7 @@ static int mal_probe(struct platform_device *ofdev)
+ 		printk(KERN_ERR
+ 		       "mal%d: can't find MAL num-tx-chans property!\n",
+ 		       index);
+-		err = -ENODEV;
+-		goto fail;
++		return -ENODEV;
+ 	}
+ 	mal->num_tx_chans = prop[0];
+ 
+@@ -549,26 +549,10 @@ static int mal_probe(struct platform_device *ofdev)
+ 		printk(KERN_ERR
+ 		       "mal%d: can't find MAL num-rx-chans property!\n",
+ 		       index);
+-		err = -ENODEV;
+-		goto fail;
++		return -ENODEV;
+ 	}
+ 	mal->num_rx_chans = prop[0];
+ 
+-	dcr_base = dcr_resource_start(ofdev->dev.of_node, 0);
+-	if (dcr_base == 0) {
+-		printk(KERN_ERR
+-		       "mal%d: can't find DCR resource!\n", index);
+-		err = -ENODEV;
+-		goto fail;
+-	}
+-	mal->dcr_host = dcr_map(ofdev->dev.of_node, dcr_base, 0x100);
+-	if (!DCR_MAP_OK(mal->dcr_host)) {
+-		printk(KERN_ERR
+-		       "mal%d: failed to map DCRs !\n", index);
+-		err = -ENODEV;
+-		goto fail;
+-	}
+-
+ 	if (of_device_is_compatible(ofdev->dev.of_node, "ibm,mcmal-405ez")) {
+ #if defined(CONFIG_IBM_EMAC_MAL_CLR_ICINTSTAT) && \
+ 		defined(CONFIG_IBM_EMAC_MAL_COMMON_ERR)
+@@ -577,28 +561,21 @@ static int mal_probe(struct platform_device *ofdev)
+ #else
+ 		printk(KERN_ERR "%pOF: Support for 405EZ not enabled!\n",
+ 				ofdev->dev.of_node);
+-		err = -ENODEV;
+-		goto fail;
++		return -ENODEV;
+ #endif
+ 	}
+ 
+-	mal->txeob_irq = irq_of_parse_and_map(ofdev->dev.of_node, 0);
+-	mal->rxeob_irq = irq_of_parse_and_map(ofdev->dev.of_node, 1);
+-	mal->serr_irq = irq_of_parse_and_map(ofdev->dev.of_node, 2);
+-
+-	if (mal_has_feature(mal, MAL_FTR_COMMON_ERR_INT)) {
+-		mal->txde_irq = mal->rxde_irq = mal->serr_irq;
+-	} else {
+-		mal->txde_irq = irq_of_parse_and_map(ofdev->dev.of_node, 3);
+-		mal->rxde_irq = irq_of_parse_and_map(ofdev->dev.of_node, 4);
++	dcr_base = dcr_resource_start(ofdev->dev.of_node, 0);
++	if (dcr_base == 0) {
++		printk(KERN_ERR
++		       "mal%d: can't find DCR resource!\n", index);
++		return -ENODEV;
+ 	}
+-
+-	if (!mal->txeob_irq || !mal->rxeob_irq || !mal->serr_irq ||
+-	    !mal->txde_irq  || !mal->rxde_irq) {
++	mal->dcr_host = dcr_map(ofdev->dev.of_node, dcr_base, 0x100);
++	if (!DCR_MAP_OK(mal->dcr_host)) {
+ 		printk(KERN_ERR
+-		       "mal%d: failed to map interrupts !\n", index);
+-		err = -ENODEV;
+-		goto fail_unmap;
++		       "mal%d: failed to map DCRs !\n", index);
++		return -ENODEV;
+ 	}
+ 
+ 	INIT_LIST_HEAD(&mal->poll_list);
+@@ -654,31 +631,43 @@ static int mal_probe(struct platform_device *ofdev)
+ 			     sizeof(struct mal_descriptor) *
+ 			     mal_rx_bd_offset(mal, i));
+ 
++	mal->txeob_irq = platform_get_irq(ofdev, 0);
++	mal->rxeob_irq = platform_get_irq(ofdev, 1);
++	mal->serr_irq = platform_get_irq(ofdev, 2);
++
+ 	if (mal_has_feature(mal, MAL_FTR_COMMON_ERR_INT)) {
++		mal->txde_irq = mal->rxde_irq = mal->serr_irq;
+ 		irqflags = IRQF_SHARED;
+ 		hdlr_serr = hdlr_txde = hdlr_rxde = mal_int;
+ 	} else {
++		mal->txde_irq = platform_get_irq(ofdev, 3);
++		mal->rxde_irq = platform_get_irq(ofdev, 4);
+ 		irqflags = 0;
+ 		hdlr_serr = mal_serr;
+ 		hdlr_txde = mal_txde;
+ 		hdlr_rxde = mal_rxde;
+ 	}
+ 
+-	err = request_irq(mal->serr_irq, hdlr_serr, irqflags, "MAL SERR", mal);
++	err = devm_request_irq(&ofdev->dev, mal->serr_irq, hdlr_serr, irqflags,
++			       "MAL SERR", mal);
+ 	if (err)
+ 		goto fail2;
+-	err = request_irq(mal->txde_irq, hdlr_txde, irqflags, "MAL TX DE", mal);
++	err = devm_request_irq(&ofdev->dev, mal->txde_irq, hdlr_txde, irqflags,
++			       "MAL TX DE", mal);
+ 	if (err)
+-		goto fail3;
+-	err = request_irq(mal->txeob_irq, mal_txeob, 0, "MAL TX EOB", mal);
++		goto fail2;
++	err = devm_request_irq(&ofdev->dev, mal->txeob_irq, mal_txeob, 0,
++			       "MAL TX EOB", mal);
+ 	if (err)
+-		goto fail4;
+-	err = request_irq(mal->rxde_irq, hdlr_rxde, irqflags, "MAL RX DE", mal);
++		goto fail2;
++	err = devm_request_irq(&ofdev->dev, mal->rxde_irq, hdlr_rxde, irqflags,
++			       "MAL RX DE", mal);
+ 	if (err)
+-		goto fail5;
+-	err = request_irq(mal->rxeob_irq, mal_rxeob, 0, "MAL RX EOB", mal);
++		goto fail2;
++	err = devm_request_irq(&ofdev->dev, mal->rxeob_irq, mal_rxeob, 0,
++			       "MAL RX EOB", mal);
+ 	if (err)
+-		goto fail6;
++		goto fail2;
+ 
+ 	/* Enable all MAL SERR interrupt sources */
+ 	set_mal_dcrn(mal, MAL_IER, MAL_IER_EVENTS);
+@@ -697,23 +686,12 @@ static int mal_probe(struct platform_device *ofdev)
+ 
+ 	return 0;
+ 
+- fail6:
+-	free_irq(mal->rxde_irq, mal);
+- fail5:
+-	free_irq(mal->txeob_irq, mal);
+- fail4:
+-	free_irq(mal->txde_irq, mal);
+- fail3:
+-	free_irq(mal->serr_irq, mal);
+  fail2:
+ 	dma_free_coherent(&ofdev->dev, bd_size, mal->bd_virt, mal->bd_dma);
+  fail_dummy:
+ 	free_netdev(mal->dummy_dev);
+  fail_unmap:
+ 	dcr_unmap(mal->dcr_host, 0x100);
+- fail:
+-	kfree(mal);
+-
+ 	return err;
+ }
+ 
+@@ -732,22 +710,17 @@ static void mal_remove(struct platform_device *ofdev)
+ 		       "mal%d: commac list is not empty on remove!\n",
+ 		       mal->index);
+ 
+-	free_irq(mal->serr_irq, mal);
+-	free_irq(mal->txde_irq, mal);
+-	free_irq(mal->txeob_irq, mal);
+-	free_irq(mal->rxde_irq, mal);
+-	free_irq(mal->rxeob_irq, mal);
+-
+ 	mal_reset(mal);
+ 
+ 	free_netdev(mal->dummy_dev);
+ 
++	dcr_unmap(mal->dcr_host, 0x100);
++
+ 	dma_free_coherent(&ofdev->dev,
+ 			  sizeof(struct mal_descriptor) *
+-			  (NUM_TX_BUFF * mal->num_tx_chans +
+-			   NUM_RX_BUFF * mal->num_rx_chans), mal->bd_virt,
+-			  mal->bd_dma);
+-	kfree(mal);
++				  (NUM_TX_BUFF * mal->num_tx_chans +
++				   NUM_RX_BUFF * mal->num_rx_chans),
++			  mal->bd_virt, mal->bd_dma);
+ }
+ 
+ static const struct of_device_id mal_platform_match[] =
+@@ -779,12 +752,4 @@ static struct platform_driver mal_of_driver = {
+ 	.remove_new = mal_remove,
+ };
+ 
+-int __init mal_init(void)
+-{
+-	return platform_driver_register(&mal_of_driver);
+-}
+-
+-void mal_exit(void)
+-{
+-	platform_driver_unregister(&mal_of_driver);
+-}
++module_platform_driver(mal_of_driver);
+diff --git a/drivers/net/ethernet/ibm/emac/mal.h b/drivers/net/ethernet/ibm/emac/mal.h
+index e0ddc41186a2..2963b36be6f5 100644
+--- a/drivers/net/ethernet/ibm/emac/mal.h
++++ b/drivers/net/ethernet/ibm/emac/mal.h
+@@ -252,10 +252,6 @@ static inline int mal_has_feature(struct mal_instance *dev,
+ 		(MAL_FTRS_POSSIBLE & dev->features & feature);
+ }
+ 
+-/* Register MAL devices */
+-int mal_init(void);
+-void mal_exit(void);
+-
+ int mal_register_commac(struct mal_instance *mal,
+ 			struct mal_commac *commac);
+ void mal_unregister_commac(struct mal_instance *mal,
+diff --git a/drivers/net/ethernet/ibm/emac/rgmii.c b/drivers/net/ethernet/ibm/emac/rgmii.c
+index e1712fdc3c31..25a13a00a614 100644
+--- a/drivers/net/ethernet/ibm/emac/rgmii.c
++++ b/drivers/net/ethernet/ibm/emac/rgmii.c
+@@ -216,31 +216,20 @@ void *rgmii_dump_regs(struct platform_device *ofdev, void *buf)
+ 
+ static int rgmii_probe(struct platform_device *ofdev)
+ {
+-	struct device_node *np = ofdev->dev.of_node;
+ 	struct rgmii_instance *dev;
+-	struct resource regs;
+-	int rc;
+ 
+-	rc = -ENOMEM;
+-	dev = kzalloc(sizeof(struct rgmii_instance), GFP_KERNEL);
+-	if (dev == NULL)
+-		goto err_gone;
++	dev = devm_kzalloc(&ofdev->dev, sizeof(struct rgmii_instance),
++			   GFP_KERNEL);
++	if (!dev)
++		return -ENOMEM;
+ 
+ 	mutex_init(&dev->lock);
+ 	dev->ofdev = ofdev;
+ 
+-	rc = -ENXIO;
+-	if (of_address_to_resource(np, 0, &regs)) {
+-		printk(KERN_ERR "%pOF: Can't get registers address\n", np);
+-		goto err_free;
+-	}
+-
+-	rc = -ENOMEM;
+-	dev->base = (struct rgmii_regs __iomem *)ioremap(regs.start,
+-						 sizeof(struct rgmii_regs));
+-	if (dev->base == NULL) {
+-		printk(KERN_ERR "%pOF: Can't map device registers!\n", np);
+-		goto err_free;
++	dev->base = devm_platform_ioremap_resource(ofdev, 0);
++	if (IS_ERR(dev->base)) {
++		dev_err(&ofdev->dev, "can't map device registers");
++		return PTR_ERR(dev->base);
+ 	}
+ 
+ 	/* Check for RGMII flags */
+@@ -266,21 +255,6 @@ static int rgmii_probe(struct platform_device *ofdev)
+ 	platform_set_drvdata(ofdev, dev);
+ 
+ 	return 0;
+-
+- err_free:
+-	kfree(dev);
+- err_gone:
+-	return rc;
+-}
+-
+-static void rgmii_remove(struct platform_device *ofdev)
+-{
+-	struct rgmii_instance *dev = platform_get_drvdata(ofdev);
+-
+-	WARN_ON(dev->users != 0);
+-
+-	iounmap(dev->base);
+-	kfree(dev);
+ }
+ 
+ static const struct of_device_id rgmii_match[] =
+@@ -300,15 +274,6 @@ static struct platform_driver rgmii_driver = {
+ 		.of_match_table = rgmii_match,
+ 	},
+ 	.probe = rgmii_probe,
+-	.remove_new = rgmii_remove,
+ };
+ 
+-int __init rgmii_init(void)
+-{
+-	return platform_driver_register(&rgmii_driver);
+-}
+-
+-void rgmii_exit(void)
+-{
+-	platform_driver_unregister(&rgmii_driver);
+-}
++module_platform_driver(rgmii_driver);
+diff --git a/drivers/net/ethernet/ibm/emac/rgmii.h b/drivers/net/ethernet/ibm/emac/rgmii.h
+index 8e4e36eed172..170bcd35039b 100644
+--- a/drivers/net/ethernet/ibm/emac/rgmii.h
++++ b/drivers/net/ethernet/ibm/emac/rgmii.h
+@@ -52,8 +52,6 @@ struct rgmii_instance {
+ 
+ #ifdef CONFIG_IBM_EMAC_RGMII
+ 
+-int rgmii_init(void);
+-void rgmii_exit(void);
+ int rgmii_attach(struct platform_device *ofdev, int input, int mode);
+ void rgmii_detach(struct platform_device *ofdev, int input);
+ void rgmii_get_mdio(struct platform_device *ofdev, int input);
+@@ -64,8 +62,6 @@ void *rgmii_dump_regs(struct platform_device *ofdev, void *buf);
+ 
+ #else
+ 
+-# define rgmii_init()		0
+-# define rgmii_exit()		do { } while(0)
+ # define rgmii_attach(x,y,z)	(-ENXIO)
+ # define rgmii_detach(x,y)	do { } while(0)
+ # define rgmii_get_mdio(o,i)	do { } while (0)
+diff --git a/drivers/net/ethernet/ibm/emac/tah.c b/drivers/net/ethernet/ibm/emac/tah.c
+index fa3488258ca2..27c1b3f77125 100644
+--- a/drivers/net/ethernet/ibm/emac/tah.c
++++ b/drivers/net/ethernet/ibm/emac/tah.c
+@@ -87,31 +87,20 @@ void *tah_dump_regs(struct platform_device *ofdev, void *buf)
+ 
+ static int tah_probe(struct platform_device *ofdev)
+ {
+-	struct device_node *np = ofdev->dev.of_node;
+ 	struct tah_instance *dev;
+-	struct resource regs;
+-	int rc;
+ 
+-	rc = -ENOMEM;
+-	dev = kzalloc(sizeof(struct tah_instance), GFP_KERNEL);
+-	if (dev == NULL)
+-		goto err_gone;
++	dev = devm_kzalloc(&ofdev->dev, sizeof(struct tah_instance),
++			   GFP_KERNEL);
++	if (!dev)
++		return -ENOMEM;
+ 
+ 	mutex_init(&dev->lock);
+ 	dev->ofdev = ofdev;
+ 
+-	rc = -ENXIO;
+-	if (of_address_to_resource(np, 0, &regs)) {
+-		printk(KERN_ERR "%pOF: Can't get registers address\n", np);
+-		goto err_free;
+-	}
+-
+-	rc = -ENOMEM;
+-	dev->base = (struct tah_regs __iomem *)ioremap(regs.start,
+-					       sizeof(struct tah_regs));
+-	if (dev->base == NULL) {
+-		printk(KERN_ERR "%pOF: Can't map device registers!\n", np);
+-		goto err_free;
++	dev->base = devm_platform_ioremap_resource(ofdev, 0);
++	if (IS_ERR(dev->base)) {
++		dev_err(&ofdev->dev, "can't map device registers");
++		return PTR_ERR(dev->base);
+ 	}
+ 
+ 	platform_set_drvdata(ofdev, dev);
+@@ -123,21 +112,6 @@ static int tah_probe(struct platform_device *ofdev)
+ 	wmb();
+ 
+ 	return 0;
+-
+- err_free:
+-	kfree(dev);
+- err_gone:
+-	return rc;
+-}
+-
+-static void tah_remove(struct platform_device *ofdev)
+-{
+-	struct tah_instance *dev = platform_get_drvdata(ofdev);
+-
+-	WARN_ON(dev->users != 0);
+-
+-	iounmap(dev->base);
+-	kfree(dev);
+ }
+ 
+ static const struct of_device_id tah_match[] =
+@@ -158,15 +132,6 @@ static struct platform_driver tah_driver = {
+ 		.of_match_table = tah_match,
+ 	},
+ 	.probe = tah_probe,
+-	.remove_new = tah_remove,
+ };
+ 
+-int __init tah_init(void)
+-{
+-	return platform_driver_register(&tah_driver);
+-}
+-
+-void tah_exit(void)
+-{
+-	platform_driver_unregister(&tah_driver);
+-}
++module_platform_driver(tah_driver);
+diff --git a/drivers/net/ethernet/ibm/emac/tah.h b/drivers/net/ethernet/ibm/emac/tah.h
+index 86c2b6b9d460..60c16cf7a41a 100644
+--- a/drivers/net/ethernet/ibm/emac/tah.h
++++ b/drivers/net/ethernet/ibm/emac/tah.h
+@@ -68,8 +68,6 @@ struct tah_instance {
+ 
+ #ifdef CONFIG_IBM_EMAC_TAH
+ 
+-int tah_init(void);
+-void tah_exit(void);
+ int tah_attach(struct platform_device *ofdev, int channel);
+ void tah_detach(struct platform_device *ofdev, int channel);
+ void tah_reset(struct platform_device *ofdev);
+@@ -78,8 +76,6 @@ void *tah_dump_regs(struct platform_device *ofdev, void *buf);
+ 
+ #else
+ 
+-# define tah_init()		0
+-# define tah_exit()		do { } while(0)
+ # define tah_attach(x,y)	(-ENXIO)
+ # define tah_detach(x,y)	do { } while(0)
+ # define tah_reset(x)		do { } while(0)
+diff --git a/drivers/net/ethernet/ibm/emac/zmii.c b/drivers/net/ethernet/ibm/emac/zmii.c
+index 26e86cdee2f6..abe14f4a8ea6 100644
+--- a/drivers/net/ethernet/ibm/emac/zmii.c
++++ b/drivers/net/ethernet/ibm/emac/zmii.c
+@@ -232,32 +232,21 @@ void *zmii_dump_regs(struct platform_device *ofdev, void *buf)
+ 
+ static int zmii_probe(struct platform_device *ofdev)
+ {
+-	struct device_node *np = ofdev->dev.of_node;
+ 	struct zmii_instance *dev;
+-	struct resource regs;
+-	int rc;
+ 
+-	rc = -ENOMEM;
+-	dev = kzalloc(sizeof(struct zmii_instance), GFP_KERNEL);
+-	if (dev == NULL)
+-		goto err_gone;
++	dev = devm_kzalloc(&ofdev->dev, sizeof(struct zmii_instance),
++			   GFP_KERNEL);
++	if (!dev)
++		return -ENOMEM;
+ 
+ 	mutex_init(&dev->lock);
+ 	dev->ofdev = ofdev;
+ 	dev->mode = PHY_INTERFACE_MODE_NA;
+ 
+-	rc = -ENXIO;
+-	if (of_address_to_resource(np, 0, &regs)) {
+-		printk(KERN_ERR "%pOF: Can't get registers address\n", np);
+-		goto err_free;
+-	}
+-
+-	rc = -ENOMEM;
+-	dev->base = (struct zmii_regs __iomem *)ioremap(regs.start,
+-						sizeof(struct zmii_regs));
+-	if (dev->base == NULL) {
+-		printk(KERN_ERR "%pOF: Can't map device registers!\n", np);
+-		goto err_free;
++	dev->base = devm_platform_ioremap_resource(ofdev, 0);
++	if (IS_ERR(dev->base)) {
++		dev_err(&ofdev->dev, "can't map device registers");
++		return PTR_ERR(dev->base);
+ 	}
+ 
+ 	/* We may need FER value for autodetection later */
+@@ -271,21 +260,6 @@ static int zmii_probe(struct platform_device *ofdev)
+ 	platform_set_drvdata(ofdev, dev);
+ 
+ 	return 0;
+-
+- err_free:
+-	kfree(dev);
+- err_gone:
+-	return rc;
+-}
+-
+-static void zmii_remove(struct platform_device *ofdev)
+-{
+-	struct zmii_instance *dev = platform_get_drvdata(ofdev);
+-
+-	WARN_ON(dev->users != 0);
+-
+-	iounmap(dev->base);
+-	kfree(dev);
+ }
+ 
+ static const struct of_device_id zmii_match[] =
+@@ -306,15 +280,6 @@ static struct platform_driver zmii_driver = {
+ 		.of_match_table = zmii_match,
+ 	},
+ 	.probe = zmii_probe,
+-	.remove_new = zmii_remove,
+ };
+ 
+-int __init zmii_init(void)
+-{
+-	return platform_driver_register(&zmii_driver);
+-}
+-
+-void zmii_exit(void)
+-{
+-	platform_driver_unregister(&zmii_driver);
+-}
++module_platform_driver(zmii_driver);
+diff --git a/drivers/net/ethernet/ibm/emac/zmii.h b/drivers/net/ethernet/ibm/emac/zmii.h
+index 65daedc78594..213de06d8ea2 100644
+--- a/drivers/net/ethernet/ibm/emac/zmii.h
++++ b/drivers/net/ethernet/ibm/emac/zmii.h
+@@ -48,8 +48,6 @@ struct zmii_instance {
+ 
+ #ifdef CONFIG_IBM_EMAC_ZMII
+ 
+-int zmii_init(void);
+-void zmii_exit(void);
+ int zmii_attach(struct platform_device *ofdev, int input,
+ 		phy_interface_t *mode);
+ void zmii_detach(struct platform_device *ofdev, int input);
+@@ -60,8 +58,6 @@ int zmii_get_regs_len(struct platform_device *ocpdev);
+ void *zmii_dump_regs(struct platform_device *ofdev, void *buf);
+ 
+ #else
+-# define zmii_init()		0
+-# define zmii_exit()		do { } while(0)
+ # define zmii_attach(x,y,z)	(-ENXIO)
+ # define zmii_detach(x,y)	do { } while(0)
+ # define zmii_get_mdio(x,y)	do { } while(0)
