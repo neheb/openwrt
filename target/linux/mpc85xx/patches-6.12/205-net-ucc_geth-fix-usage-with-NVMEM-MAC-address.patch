@@ -1,0 +1,27 @@
+From c5841371265e0e6fba5c41c691663f69f997b276 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Fri, 20 Sep 2024 16:01:42 -0700
+Subject: [PATCH] net: ucc_geth: fix usage with NVMEM MAC address
+
+When nvmem is not ready, of_get_ethdev_address returns -EPROBE_DEFER. In
+such a case, return -EPROBE_DEFER to avoid not having a proper MAC
+address.
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ drivers/net/ethernet/freescale/ucc_geth.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+--- a/drivers/net/ethernet/freescale/ucc_geth.c
++++ b/drivers/net/ethernet/freescale/ucc_geth.c
+@@ -3732,7 +3732,9 @@ static int ucc_geth_probe(struct platfor
+ 		goto err_deregister_fixed_link;
+ 	}
+ 
+-	of_get_ethdev_address(np, dev);
++	err = of_get_ethdev_address(np, dev);
++	if (err == -EPROBE_DEFER)
++		goto err_deregister_fixed_link;
+ 
+ 	ugeth->ug_info = ug_info;
+ 	ugeth->dev = device;

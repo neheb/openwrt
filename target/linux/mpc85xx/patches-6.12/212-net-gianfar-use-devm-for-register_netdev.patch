@@ -1,0 +1,32 @@
+From c1439d7d306bc69c77e88ab7b15893d87799a91b Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Tue, 1 Oct 2024 14:22:02 -0700
+Subject: [PATCH] net: gianfar: use devm for register_netdev
+
+Avoids manual unregister netdev.
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ drivers/net/ethernet/freescale/gianfar.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+--- a/drivers/net/ethernet/freescale/gianfar.c
++++ b/drivers/net/ethernet/freescale/gianfar.c
+@@ -3304,7 +3304,7 @@ static int gfar_probe(struct platform_de
+ 	/* Carrier starts down, phylib will bring it up */
+ 	netif_carrier_off(dev);
+ 
+-	err = register_netdev(dev);
++	err = devm_register_netdev(&ofdev->dev, dev);
+ 
+ 	if (err) {
+ 		pr_err("%s: Cannot register net device, aborting\n", dev->name);
+@@ -3373,8 +3373,6 @@ static void gfar_remove(struct platform_
+ 	of_node_put(priv->phy_node);
+ 	of_node_put(priv->tbi_node);
+ 
+-	unregister_netdev(priv->ndev);
+-
+ 	if (of_phy_is_fixed_link(np))
+ 		of_phy_deregister_fixed_link(np);
+ 

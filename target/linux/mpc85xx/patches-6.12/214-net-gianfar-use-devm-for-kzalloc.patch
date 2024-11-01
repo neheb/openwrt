@@ -1,0 +1,68 @@
+From 2b8776d91ce9a8085980446332311a367df36ba4 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Fri, 15 Nov 2024 14:40:48 -0800
+Subject: [PATCH] net: gianfar: use devm for kzalloc
+
+Remove the free_dev function as it is no longer needed. devm frees it
+automatically.
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ drivers/net/ethernet/freescale/gianfar.c | 18 ++----------------
+ 1 file changed, 2 insertions(+), 16 deletions(-)
+
+--- a/drivers/net/ethernet/freescale/gianfar.c
++++ b/drivers/net/ethernet/freescale/gianfar.c
+@@ -466,17 +466,6 @@ static void unmap_group_regs(struct gfar
+ 			iounmap(priv->gfargrp[i].regs);
+ }
+ 
+-static void free_gfar_dev(struct gfar_private *priv)
+-{
+-	int i, j;
+-
+-	for (i = 0; i < priv->num_grps; i++)
+-		for (j = 0; j < GFAR_NUM_IRQS; j++) {
+-			kfree(priv->gfargrp[i].irqinfo[j]);
+-			priv->gfargrp[i].irqinfo[j] = NULL;
+-		}
+-}
+-
+ static void disable_napi(struct gfar_private *priv)
+ {
+ 	int i;
+@@ -504,8 +493,8 @@ static int gfar_parse_group(struct devic
+ 	int i;
+ 
+ 	for (i = 0; i < GFAR_NUM_IRQS; i++) {
+-		grp->irqinfo[i] = kzalloc(sizeof(struct gfar_irqinfo),
+-					  GFP_KERNEL);
++		grp->irqinfo[i] = devm_kzalloc(
++			priv->dev, sizeof(struct gfar_irqinfo), GFP_KERNEL);
+ 		if (!grp->irqinfo[i])
+ 			return -ENOMEM;
+ 	}
+@@ -820,7 +809,6 @@ rx_alloc_failed:
+ 	gfar_free_rx_queues(priv);
+ tx_alloc_failed:
+ 	gfar_free_tx_queues(priv);
+-	free_gfar_dev(priv);
+ 	return err;
+ }
+ 
+@@ -3363,7 +3351,6 @@ register_fail:
+ 	gfar_free_tx_queues(priv);
+ 	of_node_put(priv->phy_node);
+ 	of_node_put(priv->tbi_node);
+-	free_gfar_dev(priv);
+ 	return err;
+ }
+ 
+@@ -3381,7 +3368,6 @@ static void gfar_remove(struct platform_
+ 	unmap_group_regs(priv);
+ 	gfar_free_rx_queues(priv);
+ 	gfar_free_tx_queues(priv);
+-	free_gfar_dev(priv);
+ }
+ 
+ #ifdef CONFIG_PM

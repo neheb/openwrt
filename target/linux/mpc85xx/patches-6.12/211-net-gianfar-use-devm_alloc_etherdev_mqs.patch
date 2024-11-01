@@ -1,0 +1,39 @@
+From 4ef1736c2ab8868d32fbdbbee0dd3efaf2a2fd21 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Tue, 1 Oct 2024 14:21:59 -0700
+Subject: [PATCH] net: gianfar: use devm_alloc_etherdev_mqs
+
+There seems to be a mistake here. There's a num_rx_qs variable that is not
+being passed to the allocation function. The mq variant just calls mqs
+with the last parameter of the former duplicated to the last parameter
+of the latter. That's fine if they match. Not sure they do.
+
+Also avoids manual free_netdev
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+Reviewed-by: Maxime Chevallier <maxime.chevallier@bootlin.com>
+---
+ drivers/net/ethernet/freescale/gianfar.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+--- a/drivers/net/ethernet/freescale/gianfar.c
++++ b/drivers/net/ethernet/freescale/gianfar.c
+@@ -475,8 +475,6 @@ static void free_gfar_dev(struct gfar_pr
+ 			kfree(priv->gfargrp[i].irqinfo[j]);
+ 			priv->gfargrp[i].irqinfo[j] = NULL;
+ 		}
+-
+-	free_netdev(priv->ndev);
+ }
+ 
+ static void disable_napi(struct gfar_private *priv)
+@@ -681,7 +679,8 @@ static int gfar_of_init(struct platform_
+ 		return -EINVAL;
+ 	}
+ 
+-	*pdev = alloc_etherdev_mq(sizeof(*priv), num_tx_qs);
++	*pdev = devm_alloc_etherdev_mqs(&ofdev->dev, sizeof(*priv), num_tx_qs,
++					num_rx_qs);
+ 	dev = *pdev;
+ 	if (NULL == dev)
+ 		return -ENOMEM;

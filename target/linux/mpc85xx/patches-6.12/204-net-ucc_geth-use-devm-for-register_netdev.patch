@@ -1,0 +1,31 @@
+From c324200dacd6642f1206bb6dd0bbf3061695c239 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Fri, 20 Sep 2024 15:59:17 -0700
+Subject: [PATCH] net: ucc_geth: use devm for register_netdev
+
+Avoids having to unregister manually.
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ drivers/net/ethernet/freescale/ucc_geth.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+--- a/drivers/net/ethernet/freescale/ucc_geth.c
++++ b/drivers/net/ethernet/freescale/ucc_geth.c
+@@ -3724,7 +3724,7 @@ static int ucc_geth_probe(struct platfor
+ 	/* Carrier starts down, phylib will bring it up */
+ 	netif_carrier_off(dev);
+ 
+-	err = register_netdev(dev);
++	err = devm_register_netdev(&ofdev->dev, dev);
+ 	if (err) {
+ 		if (netif_msg_probe(ugeth))
+ 			pr_err("%s: Cannot register net device, aborting\n",
+@@ -3755,7 +3755,6 @@ static void ucc_geth_remove(struct platf
+ 	struct ucc_geth_private *ugeth = netdev_priv(dev);
+ 	struct device_node *np = ofdev->dev.of_node;
+ 
+-	unregister_netdev(dev);
+ 	ucc_geth_memclean(ugeth);
+ 	if (of_phy_is_fixed_link(np))
+ 		of_phy_deregister_fixed_link(np);
