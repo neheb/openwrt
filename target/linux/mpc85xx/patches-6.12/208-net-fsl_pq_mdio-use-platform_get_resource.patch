@@ -1,0 +1,70 @@
+From 881f33a46e858966083778914a62ecab4525033b Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Thu, 14 Nov 2024 16:12:17 -0800
+Subject: [PATCH] net: fsl_pq_mdio: use platform_get_resource
+
+Replace of_address_to_resource with platform_get_resource. No need to
+use the of_node when the pdev is sufficient.
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ drivers/net/ethernet/freescale/fsl_pq_mdio.c | 19 +++++++++----------
+ 1 file changed, 9 insertions(+), 10 deletions(-)
+
+--- a/drivers/net/ethernet/freescale/fsl_pq_mdio.c
++++ b/drivers/net/ethernet/freescale/fsl_pq_mdio.c
+@@ -414,7 +414,7 @@ static int fsl_pq_mdio_probe(struct plat
+ 	struct device_node *tbi;
+ 	struct mii_bus *new_bus;
+ 	struct device_node *np;
+-	struct resource res;
++	struct resource *res;
+ 	int err;
+ 
+ 	data = device_get_match_data(dev);
+@@ -433,15 +433,15 @@ static int fsl_pq_mdio_probe(struct plat
+ 	new_bus->write = &fsl_pq_mdio_write;
+ 	new_bus->reset = &fsl_pq_mdio_reset;
+ 
+-	np = dev->of_node;
+-	err = of_address_to_resource(np, 0, &res);
+-	if (err < 0) {
++	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	if (!res) {
+ 		dev_err(dev, "could not obtain address information\n");
+-		return err;
++		return -ENOMEM;
+ 	}
+ 
++	np = dev->of_node;
+ 	snprintf(new_bus->id, MII_BUS_ID_SIZE, "%pOFn@%llx", np,
+-		 (unsigned long long)res.start);
++		 (unsigned long long)res->start);
+ 
+ 	priv->map = of_iomap(np, 0);
+ 	if (!priv->map)
+@@ -453,7 +453,7 @@ static int fsl_pq_mdio_probe(struct plat
+ 	 * contains the offset of the MII registers inside the mapped register
+ 	 * space.
+ 	 */
+-	if (data->mii_offset > resource_size(&res)) {
++	if (data->mii_offset > resource_size(res)) {
+ 		dev_err(dev, "invalid register map\n");
+ 		err = -EINVAL;
+ 		goto error;
+@@ -482,13 +482,13 @@ static int fsl_pq_mdio_probe(struct plat
+ 				goto error;
+ 			}
+ 			set_tbipa(*prop, pdev,
+-				  data->get_tbipa, priv->map, &res);
++				  data->get_tbipa, priv->map, res);
+ 			of_node_put(tbi);
+ 		}
+ 	}
+ 
+ 	if (data->ucc_configure)
+-		data->ucc_configure(res.start, res.end);
++		data->ucc_configure(res->start, res->end);
+ 
+ 	err = of_mdiobus_register(new_bus, np);
+ 	if (err) {

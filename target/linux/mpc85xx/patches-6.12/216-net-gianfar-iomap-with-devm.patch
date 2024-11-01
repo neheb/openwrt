@@ -1,0 +1,104 @@
+From 7b210aa7d922ff09447f564848ccbe099bb1778b Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Fri, 15 Nov 2024 14:48:41 -0800
+Subject: [PATCH] net: gianfar: iomap with devm
+
+Remove unmap_group_regs as it no longer served a purpose. devm can
+handle this automatically.
+
+Remove gotos as they are no longer needed.
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ drivers/net/ethernet/freescale/gianfar.c | 26 +++++-------------------
+ 1 file changed, 5 insertions(+), 21 deletions(-)
+
+--- a/drivers/net/ethernet/freescale/gianfar.c
++++ b/drivers/net/ethernet/freescale/gianfar.c
+@@ -441,15 +441,6 @@ static int gfar_alloc_rx_queues(struct g
+ 	return 0;
+ }
+ 
+-static void unmap_group_regs(struct gfar_private *priv)
+-{
+-	int i;
+-
+-	for (i = 0; i < MAXGROUPS; i++)
+-		if (priv->gfargrp[i].regs)
+-			iounmap(priv->gfargrp[i].regs);
+-}
+-
+ static void disable_napi(struct gfar_private *priv)
+ {
+ 	int i;
+@@ -483,7 +474,7 @@ static int gfar_parse_group(struct devic
+ 			return -ENOMEM;
+ 	}
+ 
+-	grp->regs = of_iomap(np, 0);
++	grp->regs = devm_of_iomap(priv->dev, np, 0, NULL);
+ 	if (!grp->regs)
+ 		return -ENOMEM;
+ 
+@@ -700,13 +691,13 @@ static int gfar_of_init(struct platform_
+ 			err = gfar_parse_group(child, priv, model);
+ 			if (err) {
+ 				of_node_put(child);
+-				goto err_grp_init;
++				return err;
+ 			}
+ 		}
+ 	} else { /* SQ_SG_MODE */
+ 		err = gfar_parse_group(np, priv, model);
+ 		if (err)
+-			goto err_grp_init;
++			return err;
+ 	}
+ 
+ 	if (of_property_read_bool(np, "bd-stash")) {
+@@ -729,7 +720,7 @@ static int gfar_of_init(struct platform_
+ 
+ 	err = of_get_ethdev_address(np, dev);
+ 	if (err == -EPROBE_DEFER)
+-		goto err_grp_init;
++		return err;
+ 	if (err) {
+ 		eth_hw_addr_random(dev);
+ 		dev_info(&ofdev->dev, "Using random MAC address: %pM\n", dev->dev_addr);
+@@ -777,7 +768,7 @@ static int gfar_of_init(struct platform_
+ 	if (!priv->phy_node && of_phy_is_fixed_link(np)) {
+ 		err = of_phy_register_fixed_link(np);
+ 		if (err)
+-			goto err_grp_init;
++			return err;
+ 
+ 		priv->phy_node = of_node_get(np);
+ 	}
+@@ -786,10 +777,6 @@ static int gfar_of_init(struct platform_
+ 	priv->tbi_node = of_parse_phandle(np, "tbi-handle", 0);
+ 
+ 	return 0;
+-
+-err_grp_init:
+-	unmap_group_regs(priv);
+-	return err;
+ }
+ 
+ static u32 cluster_entry_per_class(struct gfar_private *priv, u32 rqfar,
+@@ -3326,7 +3313,6 @@ static int gfar_probe(struct platform_de
+ register_fail:
+ 	if (of_phy_is_fixed_link(np))
+ 		of_phy_deregister_fixed_link(np);
+-	unmap_group_regs(priv);
+ 	of_node_put(priv->phy_node);
+ 	of_node_put(priv->tbi_node);
+ 	return err;
+@@ -3342,8 +3328,6 @@ static void gfar_remove(struct platform_
+ 
+ 	if (of_phy_is_fixed_link(np))
+ 		of_phy_deregister_fixed_link(np);
+-
+-	unmap_group_regs(priv);
+ }
+ 
+ #ifdef CONFIG_PM

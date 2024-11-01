@@ -1,0 +1,24 @@
+From b8d19ee195815287dd3fd3935f93f9c6abbcee42 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Fri, 15 Nov 2024 14:24:34 -0800
+Subject: [PATCH] net: gianfar: assign ofdev to priv struct
+
+This is done in probe but not of_init. This will be used for further
+devm conversions.
+
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ drivers/net/ethernet/freescale/gianfar.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/drivers/net/ethernet/freescale/gianfar.c
++++ b/drivers/net/ethernet/freescale/gianfar.c
+@@ -687,6 +687,8 @@ static int gfar_of_init(struct platform_
+ 
+ 	priv = netdev_priv(dev);
+ 	priv->ndev = dev;
++	priv->ofdev = ofdev;
++	priv->dev = &ofdev->dev;
+ 
+ 	priv->mode = mode;
+ 
