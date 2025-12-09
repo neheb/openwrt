@@ -241,7 +241,10 @@ start_service() {
 	}
 
 	[ -z "${snr}" ] && snr=0
-	[ -z "${macaddr}" ] && macaddr="00:00:00:00:00:00"
+	[ -z "${macaddr}" ] && {
+		hw=$(ip link show dev dsl0 | awk '/link\/ether/ {print $2}')
+		macaddr="${hw:-00:00:00:00:00:00}"
+	}
 	autoboot_script "$snr" "$macaddr"
 	autoboot="-a /tmp/dsl.scr -A /tmp/dsl.scr"
 
