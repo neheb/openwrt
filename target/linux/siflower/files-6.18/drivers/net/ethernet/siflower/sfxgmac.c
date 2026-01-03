@@ -907,10 +907,8 @@ static void xgmac_ethtool_get_strings(struct net_device *dev, u32 stringset,
 	if (stringset != ETH_SS_STATS)
 		return;
 
-	for (i = 0; i < ARRAY_SIZE(xgmac_mib); i++) {
-		memcpy(data, xgmac_mib[i].name, ETH_GSTRING_LEN);
-		data += ETH_GSTRING_LEN;
-	}
+	for (i = 0; i < ARRAY_SIZE(xgmac_mib); i++)
+		ethtool_puts(&data, xgmac_mib[i].name);
 }
 
 static void xgmac_ethtool_get_stats(struct net_device *dev,
