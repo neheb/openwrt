@@ -11,9 +11,9 @@ from typing import List
 
 
 def xor(data: bytes) -> bytes:
-    passphrase = "Seek AGREEMENT for the date of completion.\0"
+    passphrase = "Seek Agreement for the date of completion.\0"
     pw = cycle(bytearray(passphrase.encode('ascii')))
-    return bytearray(b ^ next(pw) for b in data)
+    return bytes(b ^ next(pw) for b in data)
 
 
 def add_fw_header(data: bytes, magic: int, hwid: int, build_id: int,
@@ -85,11 +85,11 @@ def main():
     firmware_seg = bytearray()
 
     for partition in partitions:
-        part_data = firmware[pos_input:pos_input + partition.size]
+        part_data = bytes(firmware[pos_input:pos_input + partition.size])
 
         # just to make sure that no partition is empty
         if len(part_data) == 0:
-            part_data = bytearray([0x00])
+            part_data = b'\x00'
 
         header = add_file_header(part_data, partition.name, args.buildid)
         firmware_seg += header
@@ -98,7 +98,7 @@ def main():
         pos_input += partition.size
         pos_output += len(header)
 
-    moxa_firmware = add_fw_header(firmware_seg, args.magic, args.hwid, args.buildid, offsets)
+    moxa_firmware = add_fw_header(bytes(firmware_seg), args.magic, args.hwid, args.buildid, offsets)
 
     encrypted = xor(moxa_firmware)
     with open(args.output, 'wb') as output_file:
