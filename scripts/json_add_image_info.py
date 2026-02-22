@@ -11,7 +11,12 @@ if len(argv) != 2:
     exit(1)
 
 json_path = Path(argv[1])
-file_path = Path(getenv("FILE_DIR")) / getenv("FILE_NAME")
+file_dir = getenv("FILE_DIR")
+file_name = getenv("FILE_NAME")
+if not file_dir or not file_name:
+    print("ERROR: FILE_DIR and FILE_NAME must be set")
+    exit(1)
+file_path = Path(file_dir) / file_name
 
 if not file_path.is_file():
     print("Skip JSON creation for non existing file", file_path)
@@ -70,7 +75,7 @@ file_info = {
     "target": "{}/{}".format(getenv("TARGET"), getenv("SUBTARGET")),
     "version_code": getenv("VERSION_CODE"),
     "version_number": getenv("VERSION_NUMBER"),
-    "source_date_epoch": int(getenv("SOURCE_DATE_EPOCH")),
+    "source_date_epoch": int(getenv("SOURCE_DATE_EPOCH") or 0),
     "profiles": {
         device_id: {
             "image_prefix": getenv("DEVICE_IMG_PREFIX"),
@@ -83,8 +88,8 @@ file_info = {
                     "size": file_size,
                 }
             ],
-            "device_packages": getenv("DEVICE_PACKAGES").split(),
-            "supported_devices": getenv("SUPPORTED_DEVICES").split(),
+            "device_packages": (getenv("DEVICE_PACKAGES") or "").split(),
+            "supported_devices": (getenv("SUPPORTED_DEVICES") or "").split(),
             "titles": get_titles(),
         }
     },

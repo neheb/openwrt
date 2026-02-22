@@ -28,13 +28,17 @@ import os
 import sys
 import getopt
 import getpass
-import telnetlib
 import string
 import binascii
 import socket
 import _thread
 import socketserver
 import http.server
+
+try:
+    import telnetlib  # pyright: ignore[reportMissingImports]
+except ImportError:
+    raise ImportError("telnetlib is required but not available in this Python environment")
 
 reboot = 0
 HOST = "192.168.1.1"
@@ -119,7 +123,7 @@ def image_dump(tn, dumpfile):
     print("Dumping flash contents (%dMB) to %s" % (flashsize/1048576, dumpfile))
     f = open(dumpfile, "wb")
 
-    t=flashsize/dumplen
+    t=flashsize//dumplen
     for addr in range(t):
         if verbose:
             sys.stdout.write('\r%d%%'%(100*addr/t))
@@ -140,7 +144,7 @@ def image_dump(tn, dumpfile):
                     print("Format error: %x != %x"%(a,count))
                     sys.exit(2)
                 count += 16
-                f.write(binascii.a2b_hex(string.join(s[1:],'')))
+                f.write(binascii.a2b_hex(''.join(s[1:])))
         tn.read_until(">",1)
 
     f.close()
@@ -149,18 +153,20 @@ def image_dump(tn, dumpfile):
 
 def telnet_option(sock,cmd,option):
     #print "Option: %d %d" % (ord(cmd), ord(option))
+    c = None
     if cmd == telnetlib.DO:
         c=telnetlib.WILL
     elif cmd == telnetlib.WILL:
         c=telnetlib.DO
-    sock.sendall(telnetlib.IAC + c + option)
+    if c is not None:
+        sock.sendall(telnetlib.IAC + c + option)
 
 def telnet_timeout():
     print("Fatal error: telnet timeout!")
     sys.exit(1)
 
 def usage():
-    print(__doc__ % os.path.basename(sys.argv[0]))
+    print((__doc__ or "") % os.path.basename(sys.argv[0]))
 
 ####################
 

@@ -68,7 +68,7 @@ def parse_opkg(text: str) -> dict:
     parser: email.parser.Parser = email.parser.Parser()
     chunks: list[str] = text.strip().split("\n\n")
     for chunk in chunks:
-        package: dict = parser.parsestr(chunk, headersonly=True)
+        package = parser.parsestr(chunk, headersonly=True)
         package_name: str = package["Package"]
         package_abi = package.get("ABIVersion")
         if package_abi:

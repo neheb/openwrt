@@ -16,7 +16,7 @@ output_dir = output_path.parent
 
 assert getenv("WORK_DIR"), "$WORK_DIR required"
 
-work_dir = Path(getenv("WORK_DIR"))
+work_dir = Path(getenv("WORK_DIR") or "")
 
 output = {}
 
@@ -81,7 +81,7 @@ if output:
         ],
         stdout=PIPE,
         check=True,
-        env=environ.copy().update({"TOPDIR": Path().cwd()}),
+        env={**environ, "TOPDIR": str(Path().cwd())},
         universal_newlines=True,
     ).stdout.splitlines()
 

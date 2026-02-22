@@ -87,8 +87,8 @@ class Path(object):
         Path._os_func(os.remove, path, errno.ENOENT)
 
     @staticmethod
-    def _listdir(path):
-        return Path._os_func(os.listdir, path, errno.ENOENT, default=[])
+    def _listdir(path) -> list[str]:
+        return Path._os_func(os.listdir, path, errno.ENOENT, default=[]) or []
 
     @staticmethod
     def _os_func(func, path, errno, default=None):
@@ -121,9 +121,10 @@ class Path(object):
 
         return subdir name if and only if there exists one, otherwise raise PathException
         """
-        args = ('tar', '-C', into, '-xzf', path, '--no-same-permissions')
+        into_dir = into if into is not None else "."
+        args = ('tar', '-C', into_dir, '-xzf', path, '--no-same-permissions')
         subprocess.check_call(args, preexec_fn=lambda: os.umask(0o22))
-        dirs = os.listdir(into)
+        dirs = os.listdir(into_dir)
         if len(dirs) == 1:
             return dirs[0]
         else:
@@ -132,6 +133,8 @@ class Path(object):
     @staticmethod
     def tar(path, subdir, into=None, ts=None):
         """Pack ``path`` into tarball ``into``."""
+        if into is None:
+            raise PathException('into parameter is required')
         # --sort=name requires a recent build of GNU tar
         args = ['tar', '--numeric-owner', '--owner=0', '--group=0', '--sort=name', '--mode=a-s']
         args += ['-C', path, '-cf', into, subdir]
