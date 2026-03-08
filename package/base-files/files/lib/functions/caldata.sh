@@ -48,19 +48,6 @@ caldata_extract_ubi() {
 		caldata_die "failed to extract calibration data from $ubi"
 }
 
-caldata_extract_mmc() {
-	local part=$1
-	local offset=$(($2))
-	local count=$(($3))
-	local mmc_part
-
-	mmc_part=$(find_mmc_part $part)
-	[ -n "$mmc_part" ] || caldata_die "no mmc partition found for partition $part"
-
-	caldata_dd $mmc_part /lib/firmware/$FIRMWARE $count $offset || \
-		caldata_die "failed to extract calibration data from $mmc_part"
-}
-
 caldata_extract_reverse() {
 	local part=$1
 	local offset=$2
@@ -201,7 +188,7 @@ ath11k_remove_regdomain() {
 
 	regdomain=$(hexdump -v -n 2 -s 0x34 -e '1/1 "%02x"' $target)
 	caldata_patch_data "0000" 0x34 0xa "$target"
-	
+
 	for offset in 0x450 0x458 0x500 0x5a8; do
 		regdomain_data=$(hexdump -v -n 2 -s $offset -e '1/1 "%02x"' $target)
 
