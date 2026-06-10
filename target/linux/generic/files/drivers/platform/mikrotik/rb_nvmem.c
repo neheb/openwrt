@@ -14,12 +14,19 @@
 #include <linux/nvmem-provider.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
+#include <linux/slab.h>
 
 #include "rb_hardconfig.h"
 #include "routerboot.h"
+#include "rb_wlan.h"
 
 #define TLV_TAG_MASK 	GENMASK(15, 0)
 #define TLV_LEN_MASK 	GENMASK(31, 16)
+
+struct rb_wlan_cell {
+	u16 erd_tag_id;
+	u16 raw_len;
+};
 
 static const char *rb_tlv_cell_name(u16 tag)
 {
@@ -72,16 +79,119 @@ static int rb_tlv_mac_read_cb(void *priv, const char *id, int index,
 	return 0;
 }
 
+static int rb_wlan_read_cb(void *priv, const char *id, int index,
+			   unsigned int offset, void *buf, size_t bytes)
+{
+	struct rb_wlan_cell *wlan_cell = priv;
+	size_t outlen = RB_ART_SIZE;
+	u8 *outbuf;
+	int ret;
+
+	outbuf = kmalloc(outlen, GFP_KERNEL);
+	if (!outbuf)
+		return -ENOMEM;
+
+	ret = rb_wlan_data_unpack(buf, wlan_cell->raw_len,
+				  wlan_cell->erd_tag_id, outbuf, &outlen);
+	if (ret)
+		goto out;
+
+	memset(buf, 0, RB_ART_SIZE);
+	memcpy(buf, outbuf, outlen);
+
+out:
+	kfree(outbuf);
+	return ret;
+}
+
 static nvmem_cell_post_process_t rb_tlv_read_cb(u16 tag)
 {
 	switch (tag) {
 	case RB_ID_MAC_ADDRESS_PACK:
 		return &rb_tlv_mac_read_cb;
+	case RB_ID_WLAN_DATA:
+		return &rb_wlan_read_cb;
 	default:
 		break;
 	}
 
 	return NULL;
+}
+
+static int rb_add_wlan_cell(struct device *dev, struct nvmem_device *nvmem,
+			    struct device_node *layout, const char *name,
+			    u32 offset, u16 tlv_len, u16 erd_tag_id)
+{
+	struct nvmem_cell_info cell = {};
+	struct rb_wlan_cell *wlan_cell;
+
+	wlan_cell = devm_kzalloc(dev, sizeof(*wlan_cell), GFP_KERNEL);
+	if (!wlan_cell)
+		return -ENOMEM;
+
+	wlan_cell->erd_tag_id = erd_tag_id;
+	wlan_cell->raw_len = tlv_len;
+
+	cell.name = name;
+	cell.offset = offset;
+	cell.raw_len = tlv_len;
+	cell.bytes = RB_ART_SIZE;
+	cell.np = of_get_child_by_name(layout, cell.name);
+	cell.read_post_process = rb_wlan_read_cb;
+	cell.priv = wlan_cell;
+
+	return nvmem_add_one_cell(nvmem, &cell);
+}
+
+static int rb_add_wlan_cells(struct device *dev, struct nvmem_device *nvmem,
+			     struct device_node *layout, const u8 *data,
+			     u32 offset, u16 tlv_len)
+{
+	static const struct {
+		const char *name;
+		u16 erd_tag_id;
+	} multi[] = {
+		{ "wlan-data-0", RB_WLAN_ERD_ID_MULTI_8001 },
+		{ "wlan-data-2", RB_WLAN_ERD_ID_MULTI_8201 },
+	};
+	u8 *outbuf;
+	size_t outlen;
+	int i, ret, err = 0;
+
+	if (tlv_len > RB_ART_SIZE)
+		return -EFBIG;
+
+	outbuf = kmalloc(RB_ART_SIZE, GFP_KERNEL);
+	if (!outbuf)
+		return -ENOMEM;
+
+	outlen = RB_ART_SIZE;
+	ret = rb_wlan_data_unpack(data + offset, tlv_len, RB_WLAN_ERD_ID_SOLO,
+				  outbuf, &outlen);
+	if (!ret) {
+		kfree(outbuf);
+		return rb_add_wlan_cell(dev, nvmem, layout, "wlan-data",
+					offset, tlv_len, RB_WLAN_ERD_ID_SOLO);
+	}
+
+	for (i = 0; i < ARRAY_SIZE(multi); i++) {
+		outlen = RB_ART_SIZE;
+		ret = rb_wlan_data_unpack(data + offset, tlv_len,
+					  multi[i].erd_tag_id, outbuf, &outlen);
+		if (ret)
+			continue;
+
+		ret = rb_add_wlan_cell(dev, nvmem, layout, multi[i].name,
+				       offset, tlv_len, multi[i].erd_tag_id);
+		if (ret) {
+			err = ret;
+			break;
+		}
+	}
+
+	kfree(outbuf);
+
+	return err;
 }
 
 static int rb_add_cells(struct device *dev, struct nvmem_device *nvmem,
@@ -129,6 +239,17 @@ static int rb_add_cells(struct device *dev, struct nvmem_device *nvmem,
 		cell.name = rb_tlv_cell_name(tlv_tag);
 		if (!cell.name)
 			goto skip;
+
+		if (tlv_tag == RB_ID_WLAN_DATA) {
+			ret = rb_add_wlan_cells(dev, nvmem, layout, data,
+						offset, tlv_len);
+			if (ret) {
+				of_node_put(layout);
+				return ret;
+			}
+
+			goto skip;
+		}
 
 		cell.offset = offset;
 		/*
