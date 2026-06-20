@@ -326,7 +326,7 @@ Signed-off-by: Daniel Golle <daniel@makrotopia.org>
 +		set_disk_ro(disk, 1);
 +		snprintf(disk->disk_name, sizeof(disk->disk_name), FIT_DEVICE_PREFIX "%u", slot);
 +	} else {
-+		strcpy(disk->disk_name, FIT_DEVICE_PREFIX "rw");
++		strscpy(disk->disk_name, FIT_DEVICE_PREFIX "rw", sizeof(disk->disk_name));
 +	}
 +
 +	set_capacity(disk, nr_sect);

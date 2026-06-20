@@ -15,7 +15,7 @@ Signed-off-by: Felix Fietkau <nbd@nbd.name>
  		goto err_unreg_netdev;
  	}
 +	eth->dummy_dev->threaded = 1;
-+	strcpy(eth->dummy_dev->name, "mtk_eth");
++	strscpy(eth->dummy_dev->name, "mtk_eth", sizeof(eth->dummy_dev->name));
  	netif_napi_add(eth->dummy_dev, &eth->tx_napi, mtk_napi_tx);
  	netif_napi_add(eth->dummy_dev, &eth->rx_napi, mtk_napi_rx);
  
