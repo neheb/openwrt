@@ -160,6 +160,9 @@ static int __init ath79_intc_of_init(
 		goto err;
 	}
 
+	/* Clear any stale pending interrupts from a warm reboot */
+	ath79_reset_wr(intc->int_status, 0);
+
 	irq_set_chained_handler_and_data(intc->irq, ath79_intc_irq_handler, domain);
 
 	return 0;
