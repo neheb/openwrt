@@ -16,7 +16,6 @@ import os
 import os.path
 import re
 import shutil
-import ssl
 import subprocess
 import sys
 import time
@@ -410,8 +409,7 @@ class DownloadGitHubTarball(object):
             'User-Agent': 'OpenWrt',
         }
         req = urllib.request.Request(url, headers=headers)
-        sslcontext = ssl._create_unverified_context()
-        fileobj = urllib.request.urlopen(req, context=sslcontext)
+        fileobj = urllib.request.urlopen(req)
         return fileobj
 
     def _error(self, msg):
