@@ -165,7 +165,7 @@ class GitHubCommitTsCache(object):
     def get(self, k):
         """Get timestamp with key ``k``."""
         fileno = os.open(self.cachef, os.O_RDONLY | os.O_CREAT)
-        with os.fdopen(fileno) as fin:
+        with os.fdopen(fileno, errors='replace') as fin:
             try:
                 fcntl.lockf(fileno, fcntl.LOCK_SH)
                 self._cache_init(fin)
@@ -179,7 +179,7 @@ class GitHubCommitTsCache(object):
     def set(self, k, v):
         """Update timestamp with ``k``."""
         fileno = os.open(self.cachef, os.O_RDWR | os.O_CREAT)
-        with os.fdopen(fileno, 'w+') as f:
+        with os.fdopen(fileno, 'w+', errors='replace') as f:
             try:
                 fcntl.lockf(fileno, fcntl.LOCK_EX)
                 self._cache_init(f)
@@ -190,10 +190,13 @@ class GitHubCommitTsCache(object):
 
     def _cache_init(self, fin):
         for line in fin:
-            k, ts, updated = line.split()
-            ts = int(ts)
-            updated = int(updated)
-            self.cache[k] = (ts, updated)
+            try:
+                k, ts, updated = line.split()
+                ts = int(ts)
+                updated = int(updated)
+                self.cache[k] = (ts, updated)
+            except ValueError:
+                continue
 
     def _cache_flush(self, fout):
         cache = sorted(self.cache.items(), key=lambda a: a[1][1])
