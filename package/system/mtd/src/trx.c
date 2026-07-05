@@ -98,7 +98,7 @@ trx_fixup(int fd, const char *name)
 	}
 
 	scan = ptr + offsetof(struct trx_header, flag_version);
-	trx->crc32 = crc32buf(scan, trx->len - (scan - ptr));
+	trx->crc32 = crc32buf(scan, STORE32_LE(trx->len) - (scan - ptr));
 	msync(ptr, sizeof(struct trx_header), MS_SYNC|MS_INVALIDATE);
 	munmap(ptr, len);
 	close(bfd);
@@ -128,7 +128,7 @@ trx_check(int imagefd, const char *mtd, char *buf, int *len)
 	}
 
 	if (ntohl(trx->magic) != opt_trxmagic ||
-	    trx->len < sizeof(struct trx_header)) {
+	    STORE32_LE(trx->len) < sizeof(struct trx_header)) {
 		if (quiet < 2) {
 			fprintf(stderr, "Bad trx header\n");
 			fprintf(stderr, "This is not the correct file format; refusing to flash.\n"
@@ -144,7 +144,7 @@ trx_check(int imagefd, const char *mtd, char *buf, int *len)
 		exit(1);
 	}
 
-	if(mtdsize < trx->len) {
+	if(mtdsize < STORE32_LE(trx->len)) {
 		fprintf(stderr, "Image too big for partition: %s\n", mtd);
 		close(fd);
 		return 0;
