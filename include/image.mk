@@ -346,6 +346,23 @@ ifneq ($(CONFIG_JSON_CYCLONEDX_SBOM),)
 endif
 endef
 
+define Image/gzip-ext4-padded-squashfs
+
+  define Image/Build/squashfs
+    $(call Image/pad-root-squashfs)
+  endef
+
+  ifneq ($(CONFIG_TARGET_IMAGES_GZIP),)
+    define Image/Build/libdeflate-gzip/ext4
+      $(call Image/Build/libdeflate-gzip,ext4)
+    endef
+    define Image/Build/libdeflate-gzip/squashfs
+      $(call Image/Build/libdeflate-gzip,squashfs)
+    endef
+  endif
+
+endef
+
 ifeq ($(filter-out targz,$(ROOTFS_FILESYSTEM)),)
 ifdef CONFIG_TARGET_ROOTFS_TARGZ
   define Image/Build/targz
@@ -760,6 +777,9 @@ define Device/Build/image
 	$$(call concat_cmd,$(if $(IMAGE/$(2)/$(1)),$(IMAGE/$(2)/$(1)),$(IMAGE/$(2))))
 
   .IGNORE: $(BIN_DIR)/$(call DEVICE_IMG_NAME,$(1),$(2))
+
+  $(BIN_DIR)/$(call DEVICE_IMG_NAME,$(1),$(2)).gz: $(KDIR)/tmp/$(call DEVICE_IMG_NAME,$(1),$(2))
+	libdeflate-gzip -12 -c $$^ > $$@
 
   $(BIN_DIR)/$(call DEVICE_IMG_NAME,$(1),$(2)): $(KDIR)/tmp/$(call DEVICE_IMG_NAME,$(1),$(2))
 	cp $$^ $$@
