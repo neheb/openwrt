@@ -908,6 +908,25 @@ endef
 
 $(eval $(call KernelPackage,dsa-qca8k))
 
+define KernelPackage/dsa-ar9331
+  SUBMENU:=$(NETWORK_DEVICES_MENU)
+  TITLE:=Qualcomm Atheros AR9331 built-in switch DSA support
+  DEPENDS:=+kmod-dsa +kmod-regmap-core
+  KCONFIG:= \
+	CONFIG_NET_DSA_AR9331 \
+	CONFIG_NET_DSA_TAG_AR9331
+  FILES:= \
+	$(LINUX_DIR)/drivers/net/dsa/qca/ar9331.ko \
+	$(LINUX_DIR)/net/dsa/tag_ar9331.ko
+  AUTOLOAD:=$(call AutoLoad,42,ar9331,1)
+endef
+
+define KernelPackage/dsa-ar9331/description
+  DSA based kernel module for the Qualcomm Atheros AR9331 built-in Ethernet switch
+endef
+
+$(eval $(call KernelPackage,dsa-ar9331))
+
 
 define KernelPackage/dsa-realtek
   SUBMENU:=$(NETWORK_DEVICES_MENU)
