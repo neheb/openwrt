@@ -6,7 +6,7 @@ ARCH:=powerpc
 BOARD:=apm821xx
 BOARDNAME:=AppliedMicro APM821xx
 CPU_TYPE:=464fp
-FEATURES:=fpu dt gpio ramdisk squashfs usb
+FEATURES:=fpu dt gpio ramdisk squashfs ubifs usb
 SUBTARGETS:=nand sata
 
 KERNEL_PATCHVER:=6.18
