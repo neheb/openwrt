@@ -134,27 +134,6 @@
 		ranges = <0x0 0x0 0xffe00000 0x100000>;
 
 		mdio@24000 {
-
-			phy_port1: ethernet-phy@0 {
-				reg = <0>;
-			};
-
-			phy_port2: ethernet-phy@1 {
-				reg = <1>;
-			};
-
-			phy_port3: ethernet-phy@2 {
-				reg = <2>;
-			};
-
-			phy_port4: ethernet-phy@3 {
-				reg = <3>;
-			};
-
-			phy_port5: ethernet-phy@4 {
-				reg = <4>;
-			};
-
 			ethernet-switch@10 {
 				compatible = "qca,qca8327";
 				reg = <0x10>;
@@ -213,6 +192,31 @@
 							speed = <1000>;
 							full-duplex;
 						};
+					};
+				};
+
+				mdio {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					phy_port1: ethernet-phy@0 {
+						reg = <0>;
+					};
+
+					phy_port2: ethernet-phy@1 {
+						reg = <1>;
+					};
+
+					phy_port3: ethernet-phy@2 {
+						reg = <2>;
+					};
+
+					phy_port4: ethernet-phy@3 {
+						reg = <3>;
+					};
+
+					phy_port5: ethernet-phy@4 {
+						reg = <4>;
 					};
 				};
 			};
