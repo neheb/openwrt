@@ -28,18 +28,34 @@
 &eth0 {
 	status = "okay";
 
-	phy-handle = <&phy0>;
 	pll-data = <0xa6000000 0x00000101 0x00001616>;
 
 	nvmem-cells = <&macaddr_uboot_eth 0>;
 	nvmem-cell-names = "mac-address";
+
+	fixed-link {
+		speed = <1000>;
+		full-duplex;
+	};
 };
 
 &mdio0 {
 	status = "okay";
 
-	phy0: ethernet-phy@0 {
-		reg = <0>;
+	sw0: ethernet-switch@10 {
+		compatible = "qca,ar8327";
+		reg = <0x10>;
+		qca,mib-poll-interval = <500>;
+
+		qca,ar8327-initvals = <
+			0x04 0x87680000 /* PORT0 PAD MODE CTRL */
+			0x10 0x40000000 /* POWER_ON_STRAP */
+			0x50 0xcf35cf35 /* LED_CTRL0 */
+			0x54 0xcf35cf35 /* LED_CTRL1 */
+			0x58 0xcf35cf35 /* LED_CTRL2 */
+			0x5c 0x03ffff00 /* LED_CTRL3 */
+			0x7c 0x0000007e /* PORT0_STATUS */
+		>;
 	};
 };
 
