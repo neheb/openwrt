@@ -1,0 +1,174 @@
+From: Rosen Penev <rosenp@gmail.com>
+Date: Sat, 26 Sep 2026 00:00:00 -0700
+Subject: [PATCH] usb: bcma: defer VBUS enable until USB hosts are ready
+
+Northstar USB 3.0 ports are split: SuperSpeed goes to xHCI, D+/D- to
+EHCI. CFE leaves VBUS on, so a SuperSpeed device has already fallen back
+to USB 2.0 by the time Linux starts. EHCI then enumerates it as
+high-speed; xHCI never sees a connect. Hot-plug works because both
+controllers are already running.
+
+Drop regulator-boot-on so the rail is turned off when the fixed
+regulator probes, and delay the consumer enable until after xHCI has had
+a chance to bind (kmod-usb3 autoloads after ehci-platform).
+
+Assisted-by: LLM
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+---
+ drivers/usb/host/bcma-hcd.c | 79 +++++++++++++++++++++++++++++--------
+ 1 file changed, 63 insertions(+), 16 deletions(-)
+
+--- a/drivers/usb/host/bcma-hcd.c
++++ b/drivers/usb/host/bcma-hcd.c
+@@ -30,6 +30,7 @@
+ #include <linux/regulator/consumer.h>
+ #include <linux/usb/ehci_pdriver.h>
+ #include <linux/usb/ohci_pdriver.h>
++#include <linux/workqueue.h>
+ 
+ MODULE_AUTHOR("Hauke Mehrtens");
+ MODULE_DESCRIPTION("Common USB driver for BCMA Bus");
+@@ -43,6 +44,8 @@ struct bcma_hcd_device {
+ 	struct platform_device *ohci_dev;
+ 	struct gpio_desc *gpio_desc;
+ 	struct regulator *regulator;
++	struct delayed_work vbus_work;
++	bool vbus_enabled;
+ };
+ 
+ /* Wait for bitmask in a register to get set or cleared.
+@@ -282,23 +285,46 @@ static int bcma_hcd_usb20_ns_init(struct
+ 	return 0;
+ }
+ 
++static int bcma_hcd_vbus_enable(struct bcma_hcd_device *usb_dev)
++{
++	int err;
++
++	if (!usb_dev->regulator || usb_dev->vbus_enabled)
++		return 0;
++
++	err = regulator_enable(usb_dev->regulator);
++	if (!err)
++		usb_dev->vbus_enabled = true;
++
++	return err;
++}
++
++static void bcma_hcd_vbus_work(struct work_struct *work)
++{
++	struct bcma_hcd_device *usb_dev =
++		container_of(to_delayed_work(work), struct bcma_hcd_device,
++			     vbus_work);
++	int err;
++
++	err = bcma_hcd_vbus_enable(usb_dev);
++	if (err)
++		dev_err(&usb_dev->core->dev, "error enabling VBUS regulator: %d\n",
++			err);
++}
++
+ static int bcma_hci_platform_power(struct bcma_device *dev, bool on)
+ {
+ 	struct bcma_hcd_device *usb_dev = bcma_get_drvdata(dev);
+ 	int err;
+ 
+ 	if (usb_dev->gpio_desc)
+ 		return gpiod_set_value(usb_dev->gpio_desc, on);
+ 
+-	if (!usb_dev->regulator)
++	if (on)
++		return bcma_hcd_vbus_enable(usb_dev);
++
++	if (!usb_dev->regulator || !usb_dev->vbus_enabled)
+ 		return 0;
+ 
+-	if (on)
+-		err = regulator_enable(usb_dev->regulator);
+-	else
+-		err = regulator_disable(usb_dev->regulator);
+-
+-	return err;
++	err = regulator_disable(usb_dev->regulator);
++	if (!err)
++		usb_dev->vbus_enabled = false;
++
++	return err;
+ }
+ 
+ static const struct usb_ehci_pdata ehci_pdata = {
+@@ -420,12 +446,10 @@ static int bcma_hcd_probe(struct bcma_de
+ 	usb_dev->regulator = devm_regulator_get(dev, "vbus");
+ 	if (IS_ERR(usb_dev->regulator))
+ 		return dev_err_probe(dev, PTR_ERR(usb_dev->regulator), "error obtaining VBUS regulator");
+ 
+-	err = regulator_enable(usb_dev->regulator);
+-	if (err)
+-		return dev_err_probe(dev, err, "error enabling VBUS regulator");
+-
++	INIT_DELAYED_WORK(&usb_dev->vbus_work, bcma_hcd_vbus_work);
++
+ 	switch (core->id.id) {
+ 	case BCMA_CORE_USB20_HOST:
+ 		if (IS_ENABLED(CONFIG_ARM))
+@@ -446,16 +470,22 @@ static int bcma_hcd_probe(struct bcma_de
+ 		err = bcma_hcd_usb30_init(usb_dev);
+ 		break;
+ 	default:
+ 		err = -ENODEV;
+ 	}
+ 	if (err)
+-		goto error;
++		return err;
+ 
+ 	bcma_set_drvdata(core, usb_dev);
++
++	if (bcma_find_core(core->bus, BCMA_CORE_NS_USB30))
++		schedule_delayed_work(&usb_dev->vbus_work, msecs_to_jiffies(1000));
++	else {
++		err = bcma_hcd_vbus_enable(usb_dev);
++		if (err)
++			return dev_err_probe(dev, err, "error enabling VBUS regulator");
++	}
++
+ 	return 0;
+-error:
+-	regulator_disable(usb_dev->regulator);
+-	return err;
+ }
+ 
+ static void bcma_hcd_remove(struct bcma_device *dev)
+@@ -469,7 +499,9 @@ static void bcma_hcd_remove(struct bcma_
+ 	if (ehci_dev)
+ 		platform_device_unregister(ehci_dev);
+ 
+-	regulator_disable(usb_dev->regulator);
++	cancel_delayed_work_sync(&usb_dev->vbus_work);
++	if (usb_dev->vbus_enabled)
++		regulator_disable(usb_dev->regulator);
+ 	bcma_core_disable(dev, 0);
+ }
+ 
+@@ -477,6 +509,9 @@ static void bcma_hcd_shutdown(struct bcm
+ static void bcma_hcd_shutdown(struct bcma_device *dev)
+ {
++	struct bcma_hcd_device *usb_dev = bcma_get_drvdata(dev);
++
++	cancel_delayed_work_sync(&usb_dev->vbus_work);
+ 	bcma_hci_platform_power(dev, false);
+ 	bcma_core_disable(dev, 0);
+ }
+@@ -483,11 +518,14 @@ static void bcma_hcd_shutdown(struct bcm
+ 
+ static int bcma_hcd_suspend(struct bcma_device *dev)
+ {
+ 	int err;
++	struct bcma_hcd_device *usb_dev = bcma_get_drvdata(dev);
+ 
++	cancel_delayed_work_sync(&usb_dev->vbus_work);
+ 	err = bcma_hci_platform_power(dev, false);
+ 	if (err)
+ 		return err;
+ 	bcma_core_disable(dev, 0);
+ 
+ 	return 0;
