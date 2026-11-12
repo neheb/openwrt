@@ -103,6 +103,9 @@ define Device/domywifi_dw33d
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
   IMAGE/factory.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-ubi | \
 	check-size
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += domywifi_dw33d
 
@@ -130,6 +133,9 @@ define Device/dongwon_dw02-412h-64m
   DEVICE_VARIANT := (64M)
   DEVICE_ALT0_VARIANT := (64M)
   IMAGE_SIZE := 49152k
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += dongwon_dw02-412h-64m
 
@@ -138,6 +144,9 @@ define Device/dongwon_dw02-412h-128m
   DEVICE_VARIANT := (128M)
   DEVICE_ALT0_VARIANT := (128M)
   IMAGE_SIZE := 114688k
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += dongwon_dw02-412h-128m
 
@@ -185,6 +194,9 @@ define Device/glinet_gl-ar750s-nor-nand
   KERNEL_SIZE := 4096k
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
   SUPPORTED_DEVICES += glinet,gl-ar750s-nor
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += glinet_gl-ar750s-nor-nand
 
@@ -192,6 +204,9 @@ define Device/glinet_gl-ar750s-nor
   $(Device/glinet_gl-ar750s-common)
   DEVICE_VARIANT := NOR
   SUPPORTED_DEVICES += gl-ar750s glinet,gl-ar750s glinet,gl-ar750s-nor-nand
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += glinet_gl-ar750s-nor
 
@@ -279,12 +294,18 @@ define Device/glinet_gl-x1200-nor-nand
   IMAGES += factory.img
   IMAGE/factory.img := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-ubi
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += glinet_gl-x1200-nor-nand
 
 define Device/glinet_gl-x1200-nor
   $(Device/glinet_gl-x1200-common)
   DEVICE_VARIANT := NOR
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += glinet_gl-x1200-nor
 
@@ -346,6 +367,9 @@ define Device/meraki_z1
   KERNEL_INITRAMFS := $$(KERNEL)
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
   SUPPORTED_DEVICES += z1
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += meraki_z1
 
@@ -402,6 +426,9 @@ define Device/netgear_wndr3700-v4
   NETGEAR_BOARD_ID := WNDR3700v4
   NETGEAR_HW_ID := 29763948+128+128
   $(Device/netgear_ath79_nand)
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += netgear_wndr3700-v4
 
@@ -412,6 +439,9 @@ define Device/netgear_wndr4300
   NETGEAR_BOARD_ID := WNDR4300
   NETGEAR_HW_ID := 29763948+0+128+128+2x2+3x3
   $(Device/netgear_ath79_nand)
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += netgear_wndr4300
 
@@ -422,6 +452,9 @@ define Device/netgear_wndr4300sw
   NETGEAR_BOARD_ID := WNDR4300SW
   NETGEAR_HW_ID := 29763948+0+128+128+2x2+3x3
   $(Device/netgear_ath79_nand)
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += netgear_wndr4300sw
 
@@ -432,34 +465,41 @@ define Device/netgear_wndr4300tn
   NETGEAR_BOARD_ID := WNDR4300TN
   NETGEAR_HW_ID := 29763948+0+128+128+2x2+3x3
   $(Device/netgear_ath79_nand)
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += netgear_wndr4300tn
 
 define Device/netgear_wndr4300-v2
   SOC := qca9563
-  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_VERSION := 1.2
   DEVICE_COMPAT_MESSAGE := Partition table has been changed to fix the \
-	first reboot issue. Please reflash factory image with nmrp or tftp.
+	first reboot issue. Please reflash factory image with nmrp or tftp. \
+	Config cannot be migrated from swconfig to DSA.
   DEVICE_MODEL := WNDR4300
   DEVICE_VARIANT := v2
   UIMAGE_MAGIC := 0x27051956
   NETGEAR_BOARD_ID := WNDR4500series
   NETGEAR_HW_ID := 29764821+2+128+128+3x3+3x3+5508012175
   $(Device/netgear_ath79_nand)
+  DEVICE_PACKAGES += kmod-dsa-qca8k
 endef
 TARGET_DEVICES += netgear_wndr4300-v2
 
 define Device/netgear_wndr4500-v3
   SOC := qca9563
-  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_VERSION := 1.2
   DEVICE_COMPAT_MESSAGE := Partition table has been changed to fix the \
-	first reboot issue. Please reflash factory image with nmrp or tftp.
+	first reboot issue. Please reflash factory image with nmrp or tftp. \
+	Config cannot be migrated from swconfig to DSA.
   DEVICE_MODEL := WNDR4500
   DEVICE_VARIANT := v3
   UIMAGE_MAGIC := 0x27051956
   NETGEAR_BOARD_ID := WNDR4500series
   NETGEAR_HW_ID := 29764821+2+128+128+3x3+3x3+5508012173
   $(Device/netgear_ath79_nand)
+  DEVICE_PACKAGES += kmod-dsa-qca8k
 endef
 TARGET_DEVICES += netgear_wndr4500-v3
 
@@ -488,6 +528,9 @@ define Device/zte_mf281
   DEVICE_PACKAGES += ath10k-firmware-qca9888-ct kmod-usb-net-rndis \
 	-ath10k-board-qca9888 ipq-wifi-zte_mf286c \
 	kmod-usb-acm comgt-ncm
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += zte_mf281
 
@@ -496,6 +539,9 @@ define Device/zte_mf282
   DEVICE_MODEL := MF282
   DEVICE_PACKAGES += ath10k-firmware-qca988x-ct kmod-usb-net-qmi-wwan \
 	kmod-usb-serial-option uqmi
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += zte_mf282
 
@@ -505,6 +551,9 @@ define Device/zte_mf286
   DEVICE_PACKAGES += ath10k-firmware-qca988x-ct ath10k-firmware-qca9888-ct \
 	-ath10k-board-qca9888 ipq-wifi-zte_mf286ar \
 	kmod-usb-net-qmi-wwan kmod-usb-serial-option uqmi
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += zte_mf286
 
@@ -514,6 +563,9 @@ define Device/zte_mf286a
   DEVICE_PACKAGES += ath10k-firmware-qca9888-ct kmod-usb-net-qmi-wwan \
 	-ath10k-board-qca9888 ipq-wifi-zte_mf286ar \
 	kmod-usb-serial-option uqmi
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += zte_mf286a
 
@@ -523,6 +575,9 @@ define Device/zte_mf286c
   DEVICE_PACKAGES += ath10k-firmware-qca9888-ct kmod-usb-net-qmi-wwan \
 	-ath10k-board-qca9888 ipq-wifi-zte_mf286c \
 	kmod-usb-serial-option uqmi
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += zte_mf286c
 
@@ -531,6 +586,9 @@ define Device/zte_mf286r
   DEVICE_MODEL := MF286R
   DEVICE_PACKAGES += ath10k-firmware-qca9888-ct kmod-usb-net-rndis kmod-usb-acm \
 	comgt-ncm
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += zte_mf286r
 
@@ -557,6 +615,9 @@ define Device/zyxel_nbg6716
   IMAGE/factory.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-ubi | \
 	zyxel-factory
   UBINIZE_OPTS := -E 5
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += zyxel_nbg6716
 
@@ -564,5 +625,8 @@ define Device/zyxel_emg2926_q10a
   $(Device/zyxel_nbg6716)
   DEVICE_MODEL := EMG2926-Q10A
   RAS_BOARD := AAVK-EMG2926Q10A
+  DEVICE_PACKAGES += kmod-dsa-qca8k
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Config cannot be migrated from swconfig to DSA
 endef
 TARGET_DEVICES += zyxel_emg2926_q10a
