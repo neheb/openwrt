@@ -906,17 +906,30 @@ endef
 
 $(eval $(call KernelPackage,dsa-mxl862xx))
 
+define KernelPackage/dsa-tag-qca
+  SUBMENU:=$(NETWORK_DEVICES_MENU)
+  TITLE:=Qualcomm Atheros switch header DSA tag support
+  DEPENDS:=+kmod-dsa
+  KCONFIG:=CONFIG_NET_DSA_TAG_QCA
+  FILES:=$(LINUX_DIR)/net/dsa/tag_qca.ko
+endef
+
+define KernelPackage/dsa-tag-qca/description
+  DSA tag driver for the 2 byte header of the QCA8xxx switches and of the
+  switches built into the AR934x, QCA953x and QCA956x SoCs
+endef
+
+$(eval $(call KernelPackage,dsa-tag-qca))
+
 define KernelPackage/dsa-qca8k
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=Qualcomm Atheros QCA8xxx switch family DSA support
-  DEPENDS:=+kmod-dsa +kmod-phy-qca83xx +kmod-regmap-core +kmod-mdio-devres
+  DEPENDS:=+kmod-dsa +kmod-dsa-tag-qca +kmod-phy-qca83xx +kmod-regmap-core \
+	+kmod-mdio-devres
   KCONFIG:= \
 	CONFIG_NET_DSA_QCA8K \
-	CONFIG_NET_DSA_QCA8K_LEDS_SUPPORT=y \
-	CONFIG_NET_DSA_TAG_QCA
-  FILES:= \
-	$(LINUX_DIR)/drivers/net/dsa/qca/qca8k.ko \
-	$(LINUX_DIR)/net/dsa/tag_qca.ko
+	CONFIG_NET_DSA_QCA8K_LEDS_SUPPORT=y
+  FILES:=$(LINUX_DIR)/drivers/net/dsa/qca/qca8k.ko
   AUTOLOAD:=$(call AutoLoad,42,qca8k,1)
 endef
 
@@ -928,8 +941,8 @@ $(eval $(call KernelPackage,dsa-qca8k))
 
 define KernelPackage/dsa-ar9331
   SUBMENU:=$(NETWORK_DEVICES_MENU)
-  TITLE:=Qualcomm Atheros AR9331 built-in switch DSA support
-  DEPENDS:=+kmod-dsa +kmod-regmap-core
+  TITLE:=Qualcomm Atheros AR9331/AR934x built-in switch DSA support
+  DEPENDS:=+kmod-dsa +kmod-dsa-tag-qca +kmod-regmap-core
   KCONFIG:= \
 	CONFIG_NET_DSA_AR9331 \
 	CONFIG_NET_DSA_TAG_AR9331
@@ -940,7 +953,8 @@ define KernelPackage/dsa-ar9331
 endef
 
 define KernelPackage/dsa-ar9331/description
-  DSA based kernel module for the Qualcomm Atheros AR9331 built-in Ethernet switch
+  DSA based kernel module for the Ethernet switch built into the Qualcomm
+  Atheros AR9331, AR934x, QCA953x and QCA956x SoCs
 endef
 
 $(eval $(call KernelPackage,dsa-ar9331))
